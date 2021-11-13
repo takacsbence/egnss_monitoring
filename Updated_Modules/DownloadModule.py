@@ -13,15 +13,15 @@ if len(sys.argv)==1:
     exit()
 
 chosen_year=str(sys.argv[1])
-print("y:",chosen_year)
+
 chosen_day=str(sys.argv[2])
-print("d:",chosen_day)
+
 chosen_location=str(sys.argv[3])
-print("l:",chosen_location)
+
 file_name=str(sys.argv[4])
-print("f:",file_name)
+
 user_id=str(sys.argv[5])
-print("id:",user_id)
+
 
 if(chosen_day.__contains__('D')):
     temp = chosen_day
@@ -33,7 +33,6 @@ elif len(chosen_day)<2:
 elif len(chosen_day)<3:
     chosen_day='0'+chosen_day
 
-print("modified day:",chosen_day)
 
 save_location=""
 temp=""
@@ -46,12 +45,10 @@ for line in f:
 
 save_location=temp[:-1]
 year_for_filename=chosen_year[2:]
-print("year:",year_for_filename)
 chosen_year='Y'+chosen_year
 
 
 full_url=url+chosen_year+'/'+'D'+ chosen_day+'/'+chosen_location+'/'+chosen_location+year_for_filename+chosen_day+file_name+".raw.zip"
-print(full_url)
 download = wget.download(full_url,save_location)
 
 
@@ -59,6 +56,7 @@ zip_path=save_location+'\\'+chosen_location+year_for_filename+chosen_day+file_na
 
 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
     zip_ref.extractall(save_location)
+
 
 
 

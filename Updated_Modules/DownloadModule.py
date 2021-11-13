@@ -5,11 +5,11 @@ import zipfile
 #http://152.66.5.8/~tbence/hc/data/Y2021/D010/PildoBox205/PildoBox20521010a.raw.zip
 
 
-#Egy példa a letöltő modul használatára:DownloadModule.py 2021 D010 205 a Lehel
+#Egy példa a letöltő modul használatára:DownloadModule.py 2021 010 205 a Lehel
 url = 'http://152.66.5.8/~tbence/hc/data/'
 
 if len(sys.argv)==1:
-    print("A helyes paraméterezés a következő: Kiválasztott nap pl: 10, 115 | PildoBox2xx | a kiválasztott óra pl: a=0 óra és így haladva 24 óráig | Személyes configurációhoz azonosító")
+    print("A helyes paraméterezés a következő: Kiválasztott év: 2021 | Kiválasztott nap pl: 10, 115 | PildoBox2xx | a kiválasztott óra pl: a=0 óra és így haladva 24 óráig | Személyes configurációhoz azonosító")
     exit()
 
 chosen_year=str(sys.argv[1])

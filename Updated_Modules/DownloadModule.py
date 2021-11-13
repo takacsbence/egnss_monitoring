@@ -5,7 +5,7 @@ import zipfile
 #http://152.66.5.8/~tbence/hc/data/Y2021/D010/PildoBox205/PildoBox20521010a.raw.zip
 
 
-#Egy példa a letöltő modul használatára:python DownloadModule.py 2021 10 PildoBox205 a Lehel
+#Egy példa a letöltő modul használatára:DownloadModule.py 2021 10 PildoBox205 a Lehel
 
 url = 'http://152.66.5.8/~tbence/hc/data/'
 

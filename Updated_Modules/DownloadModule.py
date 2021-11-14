@@ -5,55 +5,35 @@ import zipfile
 #http://152.66.5.8/~tbence/hc/data/Y2021/D010/PildoBox205/PildoBox20521010a.raw.zip
 
 
-#Egy példa a letöltő modul használatára:DownloadModule.py 2021 10 PildoBox205 a Lehel
+#an example to use this script DownloadModule.py 2021 10 205 a
 
 url = 'http://152.66.5.8/~tbence/hc/data/'
 
-if len(sys.argv)==1:
-    print("A helyes paraméterezés a következő: Kiválasztott év: 2021 | Kiválasztott nap pl: 10, 115 | PildoBox2xx | a kiválasztott óra pl: a=0 óra és így haladva 24 óráig | Személyes configurációhoz azonosító")
+#check number of args
+if len(sys.argv) != 5:
+    print("arguments: yyy ddd sss h")
+    print("where: yyy  y=year, ddd=day of year, sss=station id, h=hourly session with abc")
+    print("an example 2021 10 205 a")
     exit()
 
-chosen_year=str(sys.argv[1])
+#format args
+year = str(sys.argv[1])
+year2 = year[-2:]   #year with the last two characters
+doy = int(sys.argv[2])
+doy = "{:03d}".format(doy)  #day of year with leading zeros 10->010
+station = str(sys.argv[3])
+session = str(sys.argv[4])
 
-chosen_day=str(sys.argv[2])
+#output directory
+save_location = 'data/'
 
-chosen_location=str(sys.argv[3])
+#full url to download
+full_url = url + '/Y' + year + '/D' + doy + '/PildoBox' + station + '/PildoBox' + station + year2 + doy + session + '.raw.zip'
+print (full_url)
 
-file_name=str(sys.argv[4])
+fn = wget.download(full_url, out=save_location)
 
-user_id=str(sys.argv[5])
-
-
-if(chosen_day.__contains__('D')):
-    temp = chosen_day
-    chosen_day = chosen_day[1:]
-
-elif len(chosen_day)<2:
-    chosen_day='00'+chosen_day
-
-elif len(chosen_day)<3:
-    chosen_day='0'+chosen_day
-
-
-save_location=""
-temp=""
-
-f = open('config.txt', 'r')
-for line in f:
-        if(line.split(' ')[0]==sys.argv[5]):
-            temp=line.split(' ')[1]
-
-
-save_location=temp[:-1]
-year_for_filename=chosen_year[2:]
-chosen_year='Y'+chosen_year
-
-
-full_url=url+chosen_year+'/'+'D'+ chosen_day+'/'+chosen_location+'/'+chosen_location+year_for_filename+chosen_day+file_name+".raw.zip"
-download = wget.download(full_url,save_location)
-
-
-zip_path=save_location+'\\'+chosen_location+year_for_filename+chosen_day+file_name+".raw.zip"
+zip_path = save_location + '/PildoBox' + station + year2 + doy + session + '.raw.zip'
 
 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
     zip_ref.extractall(save_location)

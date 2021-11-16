@@ -1,9 +1,7 @@
 import wget
 import sys
-import zipfile
 
 #http://152.66.5.8/~tbence/hc/data/Y2021/D010/PildoBox205/PildoBox20521010a.raw.zip
-
 
 #an example to use this script DownloadModule.py 2021 10 205 a
 
@@ -24,20 +22,16 @@ doy = "{:03d}".format(doy)  #day of year with leading zeros 10->010
 station = str(sys.argv[3])
 session = str(sys.argv[4])
 
-#output directory
+#directory to save data locally
+##TODO check if it exists and create if not
+##TODO test under linux and windows
 save_location = 'data/'
 
 #full url to download
 full_url = url + '/Y' + year + '/D' + doy + '/PildoBox' + station + '/PildoBox' + station + year2 + doy + session + '.raw.zip'
 print (full_url)
 
-fn = wget.download(full_url, out=save_location)
-
-zip_path = save_location + '/PildoBox' + station + year2 + doy + session + '.raw.zip'
-
-with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-    zip_ref.extractall(save_location)
-
-
-
-
+#download
+##TODO check if url exists. Do not dwonload if not
+##TODO check if the file exists locally. do not dwonload if yes
+fn = wget.download(full_url, out = save_location)

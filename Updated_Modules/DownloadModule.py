@@ -8,7 +8,6 @@ import requests
 #an example to use this script DownloadModule.py 2021 10 205 a Lehel
 
 url = 'http://152.66.5.8/~tbence/hc/data/'
-
 ##TODO test under linux and windows
 
 #Basic test function for windows
@@ -33,22 +32,21 @@ def test_mode(input:str):
             print("URL Error!")
             exit()
 
-        if response.status_code==200 and not os.path.exists(save_location+'\\'+'PildoBox20521010b.raw.zip'):
+        if response.status_code==200 and not os.path.exists(save_location+'//'+'PildoBox20521010b.raw.zip'):
             download = wget.download(url, save_location)
             exit()
 
-        if os.path.exists(save_location+'\\'+'PildoBox20521010b.raw.zip'):
-            print("\nExisting file!")
+        if os.path.exists(save_location+'//'+'PildoBox20521010b.raw.zip'):
+            print("Existing file!")
             exit()
 
 test_mode(sys.argv[1])
 
-
 #check number of args
 if len(sys.argv) != 6:
-    print("arguments: yyy ddd sss h uid")
-    print("where: yyy  y=year, ddd=day of year, sss=station id, h=hourly session with abc, id=personal id")
-    print("an example 2021 10 205 a Lehel")
+    print("arguments: yyy ddd sss h")
+    print("where: yyy  y=year, ddd=day of year, sss=station id, h=hourly session with abc")
+    print("an example 2021 10 205 a")
     exit()
 
 #format args
@@ -81,18 +79,15 @@ year_for_filename= year[2:]
 
 #full url to download
 full_url = url + '/Y' + year + '/D' + doy + '/PildoBox' + station + '/PildoBox' + station + year2 + doy + session + '.raw.zip'
-print (full_url)
 
 station='PildoBox'+station
-dupe_check= save_location +'\\' + station + year_for_filename + doy + session + '.raw.zip'
+dupe_check= save_location +'//' + station + year_for_filename + doy + session + '.raw.zip'
 
 
-
-#check if url exists. Do not dwonload if not
 response=requests.get(full_url)
 if response.status_code!=200:
     print("URL Error!")
-#check if not duplicate and url exists
+
 if response.status_code==200 and not os.path.exists(dupe_check) :
     fn = wget.download(full_url, out=save_location)
 

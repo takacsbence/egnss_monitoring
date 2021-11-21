@@ -1,48 +1,66 @@
 import os
 import sys
 import zipfile
+from os.path import exists
 
-#check number of args
-if len(sys.argv) != 5:
-    print("arguments: yyy ddd sss h")
-    print("where: yyy  y=year, ddd=day of year, sss=station id, h=hourly session with abc")
-    print("an example 2021 10 205 a")
+#http://152.66.5.8/~tbence/hc/data/Y2021/D010/PildoBox205/PildoBox20521010a.raw.zip
+#Egy példa az RTKLibModule használatához: RTKLibModule.py 2021 010 205 a Lehel
+
+if len(sys.argv) != 6:
+    print("arguments: yyy ddd sss h uid")
+    print("where: yyy  y=year, ddd=day of year, sss=station id, h=hourly session with abc, uid=user id")
+    print("an example 2021 10 205 a John")
     exit()
 
-#format args
-year = str(sys.argv[1])
-year2 = year[-2:]   #year with the last two characters
-doy = int(sys.argv[2])
-doy = "{:03d}".format(doy)  #day of year with leading zeros 10->010
-station = str(sys.argv[3])
-session = str(sys.argv[4])
+year=str(sys.argv[1])
+doy=str(sys.argv[2])
+station=str(sys.argv[3])
+time=str(sys.argv[4])
+uid=str(sys.argv[5])
 
-#filename with full path
-#local directory
-save_location = 'data'
-fname = '/PildoBox' + station + year2 + doy + session + '.raw.zip'
+year_for_filename= year[2:]
 
-#unzip file
-#TODO check if zip file exists. Exit with error message if not
-#TODO check if unzipped file exists. do not unzip if not
-#TODO feedback if everything is okay
-zip_path = save_location + fname
-with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-    zip_ref.extractall(save_location)
+temp=""
+f = open('config.txt', 'r')
+for line in f:
+        if(line.split(' ')[0]==sys.argv[5]):
+            temp=line.split(' ')[1]
 
-#convert septentrio raw binary into RINEX
-#convert_to_Rinex="convbin -f 1 -f 2 -f 5 -r sbf -d D:\Rinex_datas\Extracted_zips D:\Rinex_datas\Extracted_zips\PildoBox20519335"+sys.argv[1]+".raw"
-fname = '/PildoBox' + station + year2 + doy + session + '.raw'
-convert_to_Rinex="convbin " + save_location + fname + " -r sbf -d " + save_location
-print(convert_to_Rinex)
+
+save_location=temp[:-1]
+
+
+zip_path= save_location +'\\PildoBox' + station + year_for_filename + doy + time + ".raw.zip"
+
+if exists(zip_path):
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(save_location)
+
+if not exists(zip_path):
+    print("No such file download started!")
+    cwd = os.getcwd()
+    start_path=cwd+'\\DownloadModule.py'
+    full_command="python DownloadModule.py "+year+" "+doy+" "+station+" "+time+" "+uid
+    print(full_command)
+    os.system(full_command)
+
+
+file_to_convert="PildoBox" + station + year_for_filename + doy + time + ".raw"
+
+
+convert_to_Rinex="convbin "+save_location+"\\"+file_to_convert+" -r sbf -d "+save_location
+print("Command:",convert_to_Rinex)
 os.system(convert_to_Rinex)
 
-#process with RKTpost
-obs = fname[:-4] + '.obs'
-nav = fname[:-4] + '.nav'
-sbs = fname[:-4] + '.sbs'
-pos = fname[:-4] + '.pos'
-fp = "rnx2rtkp  -k sbs.conf" + " -o " + save_location + pos + " " + save_location + obs + " " + save_location + nav + " " + save_location + sbs
-print(fp)
+obs= save_location +"\\" +"PildoBox" + station + year_for_filename + doy + time + ".obs"
+
+nav= save_location +"\\" +"PildoBox" + station + year_for_filename + doy + time + ".nav"
+
+sbs= save_location +"\\" +"PildoBox" + station + year_for_filename + doy + time + ".sbs"
+
+
+fp="rnx2rtkp -k rnxconfig.conf -p 0 -f 1 -f 2 -f 5 -t " + obs +" " + nav +" " + sbs +" -o " + save_location +"\\PildoBox" + station + year_for_filename + doy + time + ".pos"
+print("fp:",fp)
+
 os.system(fp)
 

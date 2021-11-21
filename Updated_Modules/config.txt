@@ -1,4 +1,4 @@
 --------------
-Lehel D:\Rinex_datas\Downloaded_zips
+Lehel D:\Rinex_datas\Downloaded_zips D:\Rinex_datas\E-W_graphs
 Bence xyz
 --------------

@@ -1,12 +1,10 @@
+import os.path
 import sys
 from openpyxl import load_workbook
 import matplotlib.pyplot as plt
 import math
 from datetime import date
 import datetime
-import os
-from os import path
-
 
 #Ez az excel filebol beolvasott bazisallomas osztaly
 class Base_station:
@@ -39,10 +37,6 @@ class Gps_data:
         self.age = age
         self.ratio = ratio
 
-#Sikerult mukodesre birni az rnx2rtp-t is ebben a formaban
-#fp="D:\Rinex_datas\\rnx2rtkp -p 0 -f 1 -f 2 -f 5 -t -e D:\Rinex_datas\HC-Budapest_15-10-2021_15-10-2021.o D:\Rinex_datas\HC-Budapest_15-10-2021_15-10-2021.n -o D:\Rinex_datas\HC-Budapest_15-10-2021_15-10-2021.pos"
-#os.system(fp)
-
 #a bazisallomasok tarolasa
 listofbst = []
 #a pos filebol beolvasott adatok tarolasa
@@ -59,13 +53,17 @@ time=str(sys.argv[4])
 uid=str(sys.argv[5])
 
 temp=""
-f = open('config.txt', 'r')
-for line in f:
+pic_save=""
+file = open('config.txt', 'r')
+for line in file:
         if(line.split(' ')[0]==sys.argv[5]):
             temp=line.split(' ')[1]
+            pic_save=line.split(' ')[2]
 
+file.close()
 
-save_location=temp[:-1]
+save_location=temp
+pic_save=pic_save[:-1]
 
 #ket valtozo ezek lesznek beallitva a megadott idotartam szerint a megfelelo ertekre, hogy a pos file soraibol a jo adatot olvassa az idonek megfeleloen
 start=0
@@ -144,10 +142,6 @@ elif (time == 'x'):
     start=82816
     stop=86416
 
-
-#path_to_pos = "D:\Rinex_datas\HC-Nyiregyhaza_17-10-2021_17-10-2021.pos"
-
-
 #Ez a valtozo tarolja, hogy melyik bazisallomashoz hasonlitsuk a pos filet, ugy hogy ellenorzi a pos file nevet
 base_station=0
 station_name=""
@@ -188,8 +182,14 @@ elif(station=='210'):
 
 year_for_filename= year[2:]
 station='PildoBox'+station
-file_name=save_location +'\\' + station + year_for_filename + doy + time + '.pos'
+file_name=save_location +'//' + station + year_for_filename + doy + time + '.pos'
 
+dupe_check= pic_save +'//' + station +"_"+ year+"_" + doy+"_" + time + '.png'
+
+##Todo Dupe_Check
+if os.path.exists(dupe_check):
+    print("Duplicate Detected!")
+    exit()
 
 #Itt olvassa be a pos filet jelenleg a felhasznalo altal kivalasztott idokereten belul D:\Rinex_datas\HC-Nyiregyhaza_17-10-2021_17-10-2021.pos
 f = open(file_name,'r')
@@ -200,6 +200,7 @@ for x, line in enumerate(f):
         element=Gps_data(splitted[0],splitted[1],float(splitted[2]),float(splitted[3]),float(splitted[4]),splitted[5],splitted[6],splitted[7],splitted[8],splitted[9],splitted[10],splitted[11],splitted[12],splitted[13],splitted[14])
         listofpositions.append(element)
 
+f.close()
 difference_list=[]
 
 path = "stations4.xlsx"
@@ -265,7 +266,8 @@ plt.ylabel('y - axis in meters')
 plt.title('E-W Pos differences')
 plt.legend()
 
-#Itt menti el egy mappaba a grafikonokat kepkent az adott bazisallomas nevevel es az adott nap datumaval
-plt.savefig("D:\Rinex_datas\E-W_graphs\\" + station_name + time + "ora" + ".png")
+#Itt menti el egy mappaba a grafikonokat kepkent az adott bazisallomas nevevel es az adott nap datumaval, ha már ki van értékelve egy adott pos file azt nem duplikálja, hanem felülírja
+plt.savefig(pic_save+'//' + station_name+"_" +year+"_"+doy+"_"+ time + ".png")
+
 plt.show()
 

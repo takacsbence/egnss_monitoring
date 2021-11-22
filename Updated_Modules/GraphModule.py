@@ -62,8 +62,9 @@ for line in file:
 
 file.close()
 
-save_location=temp
-pic_save=pic_save[:-1]
+save_location=temp[6:]
+pic_save=pic_save[10:-1]
+print("pic_save:",pic_save)
 
 #ket valtozo ezek lesznek beallitva a megadott idotartam szerint a megfelelo ertekre, hogy a pos file soraibol a jo adatot olvassa az idonek megfeleloen
 start=0
@@ -277,4 +278,5 @@ for f in os.listdir(save_location):
     if f.endswith('.nav') or f.endswith('.lnav') or f.endswith('.hnav') or f.endswith('.obs') or f.endswith('.pos') or f.endswith('.raw') or f.endswith('.stat') or f.endswith('.sbs'):
         print("torolt file:\n",str(f))
         os.remove(save_location+"\\"+f)
+
 

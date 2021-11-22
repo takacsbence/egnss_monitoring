@@ -27,7 +27,7 @@ for line in f:
             temp=line.split(' ')[1]
 
 
-save_location=temp
+save_location=temp[6:]
 
 
 zip_path= save_location +'\\PildoBox' + station + year_for_filename + doy + time + ".raw.zip"
@@ -62,4 +62,6 @@ fp="rnx2rtkp -k rnxconfig.conf -p 0 -f 1 -f 2 -f 5 -t " + obs +" " + nav +" " + 
 print("fp:",fp)
 
 os.system(fp)
+
+
 

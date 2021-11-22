@@ -27,10 +27,11 @@ for line in f:
             temp=line.split(' ')[1]
 
 
-save_location=temp[:-1]
+save_location=temp
 
 
 zip_path= save_location +'\\PildoBox' + station + year_for_filename + doy + time + ".raw.zip"
+print("zip:",zip_path)
 
 if exists(zip_path):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -38,11 +39,9 @@ if exists(zip_path):
 
 if not exists(zip_path):
     print("No such file download started!")
-    cwd = os.getcwd()
-    start_path=cwd+'\\DownloadModule.py'
     full_command="python DownloadModule.py "+year+" "+doy+" "+station+" "+time+" "+uid
-    print(full_command)
     os.system(full_command)
+    exit()
 
 
 file_to_convert="PildoBox" + station + year_for_filename + doy + time + ".raw"
@@ -59,7 +58,7 @@ nav= save_location +"\\" +"PildoBox" + station + year_for_filename + doy + time 
 sbs= save_location +"\\" +"PildoBox" + station + year_for_filename + doy + time + ".sbs"
 
 
-fp="rnx2rtkp -k rnxconfig.conf -p 0 -f 1 -f 2 -f 5 -t " + obs +" " + nav +" " + sbs +" -o " + save_location +"\\PildoBox" + station + year_for_filename + doy + time + ".pos"
+fp="rnx2rtkp -k rnxconfig.conf -p 0 -f 1 -f 2 -f 5 -t " + obs +" " + nav +" " + sbs +" -o " + save_location +"\PildoBox" + station + year_for_filename + doy + time + ".pos"
 print("fp:",fp)
 
 os.system(fp)

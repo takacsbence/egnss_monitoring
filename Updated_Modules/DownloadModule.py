@@ -19,7 +19,7 @@ def test_mode(input:str):
             if (line.split(' ')[0] == sys.argv[2]):
                 temp = line.split(' ')[1]
 
-        save_location = temp[:-1]
+        save_location=temp[6:]
 
         if not os.path.exists(save_location):
             os.mkdir(save_location)
@@ -67,8 +67,7 @@ for line in f:
             temp=line.split(' ')[1]
 
 
-save_location=temp
-
+save_location=temp[6:]
 
 #directory to save data locally. If directory does not exist create it
 if not os.path.exists(save_location):
@@ -92,6 +91,8 @@ if response.status_code!=200:
 
 if response.status_code==200 and not os.path.exists(dupe_check) :
     fn = wget.download(full_url, out=save_location)
+
+
 
 
 

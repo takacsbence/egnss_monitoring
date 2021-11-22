@@ -271,3 +271,10 @@ plt.savefig(pic_save+'//' + station_name+"_" +year+"_"+doy+"_"+ time + ".png")
 
 plt.show()
 
+zip_path= save_location +'\\PildoBox' + station + year_for_filename + doy + time + ".raw.zip"
+
+for f in os.listdir(save_location):
+    if f.endswith('.nav') or f.endswith('.lnav') or f.endswith('.hnav') or f.endswith('.obs') or f.endswith('.pos') or f.endswith('.raw') or f.endswith('.stat') or f.endswith('.sbs'):
+        print("torolt file:\n",str(f))
+        os.remove(save_location+"\\"+f)
+

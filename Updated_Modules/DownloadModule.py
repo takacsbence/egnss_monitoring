@@ -32,11 +32,11 @@ def test_mode(input:str):
             print("URL Error!")
             exit()
 
-        if response.status_code==200 and not os.path.exists(save_location+'//'+'PildoBox20521010b.raw.zip'):
+        if response.status_code==200 and not os.path.exists(save_location+'\\'+'PildoBox20521010b.raw.zip'):
             download = wget.download(url, save_location)
             exit()
 
-        if os.path.exists(save_location+'//'+'PildoBox20521010b.raw.zip'):
+        if os.path.exists(save_location+'\\'+'PildoBox20521010b.raw.zip'):
             print("Existing file!")
             exit()
 
@@ -67,7 +67,8 @@ for line in f:
             temp=line.split(' ')[1]
 
 
-save_location=temp[:-1]
+save_location=temp
+
 
 #directory to save data locally. If directory does not exist create it
 if not os.path.exists(save_location):
@@ -81,7 +82,8 @@ year_for_filename= year[2:]
 full_url = url + '/Y' + year + '/D' + doy + '/PildoBox' + station + '/PildoBox' + station + year2 + doy + session + '.raw.zip'
 
 station='PildoBox'+station
-dupe_check= save_location +'//' + station + year_for_filename + doy + session + '.raw.zip'
+dupe_check= save_location +'\\' + station + year_for_filename + doy + session + '.raw.zip'
+
 
 
 response=requests.get(full_url)

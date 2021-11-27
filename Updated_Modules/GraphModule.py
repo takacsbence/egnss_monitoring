@@ -1,10 +1,13 @@
 import os.path
 import sys
+
+from matplotlib.dates import DateFormatter
 from openpyxl import load_workbook
 import matplotlib.pyplot as plt
 import math
 from datetime import date
 import datetime
+import pandas as pd
 
 #Ez az excel filebol beolvasott bazisallomas osztaly
 class Base_station:
@@ -37,10 +40,7 @@ class Gps_data:
         self.age = age
         self.ratio = ratio
 
-#a bazisallomasok tarolasa
-listofbst = []
-#a pos filebol beolvasott adatok tarolasa
-listofpositions = []
+
 
 year=str(sys.argv[1])
 
@@ -183,31 +183,20 @@ elif(station=='210'):
 
 year_for_filename= year[2:]
 station='PildoBox'+station
-file_name=save_location +'//' + station + year_for_filename + doy + time + '.pos'
+file_name=save_location +'\\' + station + year_for_filename + doy + time + '.pos'
 
-dupe_check= pic_save +'//' + station +"_"+ year+"_" + doy+"_" + time + '.png'
+dupe_check= pic_save +'\\' + station +"_"+ year+"_" + doy+"_" + time + '.png'
 
-##Todo Dupe_Check
-if os.path.exists(dupe_check):
-    print("Duplicate Detected!")
-    exit()
-
-#Itt olvassa be a pos filet jelenleg a felhasznalo altal kivalasztott idokereten belul D:\Rinex_datas\HC-Nyiregyhaza_17-10-2021_17-10-2021.pos
-f = open(file_name,'r')
-for x, line in enumerate(f):
-    if x >= start and x <= stop:
-        converted = str(line)
-        splitted = converted.split()
-        element=Gps_data(splitted[0],splitted[1],float(splitted[2]),float(splitted[3]),float(splitted[4]),splitted[5],splitted[6],splitted[7],splitted[8],splitted[9],splitted[10],splitted[11],splitted[12],splitted[13],splitted[14])
-        listofpositions.append(element)
-
-f.close()
-difference_list=[]
 
 path = "stations4.xlsx"
 wb = load_workbook(path)
 ws = wb.active
 x = 2
+
+#a bazisallomasok tarolasa
+listofbst = []
+#a pos filebol beolvasott adatok tarolasa
+listofpositions = []
 
 #Itt olvassa be a bazisallomasokat az excel filebol
 while x != 12:
@@ -221,62 +210,69 @@ while x != 12:
     listofbst.append(basestc)
     x = x + 1
 
-y=0
-x=0
-Rfold=6378.137
-rad=0.000008998719243599958
-differences_by_city=[]
+##Todo Dupe_Check
+if os.path.exists(dupe_check):
+    print("Duplicate Detected!")
+    exit()
 
+data_gps=pd.read_csv(file_name,header=None,delim_whitespace=True,skiprows=15)
+data_gps.columns=["date", "time", "lat", "lon", "ele", "mode", "nsat", "stdn", "stde", "stdu", "stdne", "stdeu", "stdun", "age", "ratio",]
 
-while y != len(listofpositions):
-    diff_in_degree=listofbst[base_station].long - listofpositions[y].lon
-    dlat=(listofbst[base_station].lat*math.pi/180) - (listofpositions[y].lat*math.pi/180)
-    dlong=(listofbst[base_station].long*math.pi/180) - (listofpositions[y].lon*math.pi/180)
-    a_val=math.sin(dlat/2)*math.sin(dlat/2)+ math.cos((listofbst[base_station].lat)*math.pi/180)*math.cos((listofpositions[y].lat)*math.pi/180)*math.sin(dlong/2)*math.sin(dlong/2)
-    c=2*math.atan2(math.sqrt(a_val),math.sqrt(1-a_val))
-    diff_in_kms=Rfold*c
-    diff_in_meters=diff_in_kms*1000
-    val=(math.sqrt(math.pow(listofbst[base_station].lat-listofpositions[y].lat,2))+math.pow(listofbst[base_station].long-listofpositions[y].lon,2))/rad
-    conv_to_meter=diff_in_degree*31
-    differences_by_city.append(diff_in_meters)
-    y=y+1
+EW_meters=(data_gps['lon']-listofbst[base_station].long)*21*3600
+NS_meters=(data_gps['lat']-listofbst[base_station].lat)*31*3600
+Elevation=data_gps['ele']-listofbst[base_station].elev
 
-x_axis=[]
-y_axis=[]
-i=0
+if not os.path.exists(pic_save):
+    os.mkdir(pic_save)
 
-#A grafikon x tengelyet feltolti 3600s-al
-while i != 3600:
-    x_axis.append(datetime.timedelta(seconds=i))
-    i=i+1
+data_gps['datetime'] = pd.to_datetime(data_gps['date'] + ' ' + data_gps['time'], format='%Y/%m/%d %H:%M:%S.%f')
+fig, ax = plt.subplots(2)
+fig.tight_layout()
+ax[0].plot(data_gps['datetime'], EW_meters)
 
-
-#Az y tengely pedig az eltereseket abrazolja
-y_axis=differences_by_city
-
-today = date.today()
-
-#Itt tortenik a grafikon kirajzolasa
-it=0
-while it!=3599:
-    plt.scatter(str(x_axis[it]), y_axis[it], color="red",marker="*", s=30)
-    it=it+1
-
-plt.xlabel('x - axis in seconds')
-plt.ylabel('y - axis in meters')
-plt.title('E-W Pos differences')
-plt.legend()
-
-#Itt menti el egy mappaba a grafikonokat kepkent az adott bazisallomas nevevel es az adott nap datumaval, ha már ki van értékelve egy adott pos file azt nem duplikálja, hanem felülírja
+#EW-graph plot
+ax[0].set_ylim([-1.5, 1.5])
+ax[0].set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(), max(data_gps['datetime']).round('60min').to_pydatetime()]) #show exactly one hour session
+ax[0].set_xlabel('time (hh:mm)')
+ax[0].set_ylabel('Difference in meters')
+ax[0].xaxis.set_major_formatter(DateFormatter("%H:%M"))
+ax[0].grid()
+ax[0].set_title('EW-Position')
 plt.savefig(pic_save+'//' + station_name+"_" +year+"_"+doy+"_"+ time + ".png")
 
-plt.show()
+#NS-graph plot
+ax[1].plot(data_gps['datetime'], NS_meters)
+ax[1].set_ylim([-4,4])
+ax[1].set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(), max(data_gps['datetime']).round('60min').to_pydatetime()]) #show exactly one hour session
+ax[1].set_xlabel('time (hh:mm)')
+ax[1].set_ylabel('Difference in meters')
+ax[1].xaxis.set_major_formatter(DateFormatter("%H:%M"))
+ax[1].grid()
+ax[1].set_title('NS-Position')
+fig.set_size_inches(10, 10)
+plt.savefig(pic_save+'//' + station_name+"_" +year+"_"+doy+"_"+ time + ".png",dpi=100)
+
+#Elevation-graph plot
+fig2, ax2 = plt.subplots()
+ax2.plot(data_gps['datetime'], Elevation)
+ax2.set_ylim([-10, 10])
+ax2.set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(), max(data_gps['datetime']).round('60min').to_pydatetime()]) #show exactly one hour session
+ax2.set_xlabel('time (hh:mm)')
+ax2.set_ylabel('Difference in meters')
+ax2.xaxis.set_major_formatter(DateFormatter("%H:%M"))
+ax2.grid()
+ax2.set_title('Elevation Difference')
+plt.savefig(pic_save+'//Elev_' + station_name+"_" +year+"_"+doy+"_"+ time + ".png",dpi=100)
+
+#plt.show()
 
 zip_path= save_location +'\\PildoBox' + station + year_for_filename + doy + time + ".raw.zip"
 
 for f in os.listdir(save_location):
     if f.endswith('.nav') or f.endswith('.lnav') or f.endswith('.hnav') or f.endswith('.obs') or f.endswith('.pos') or f.endswith('.raw') or f.endswith('.stat') or f.endswith('.sbs'):
-        print("torolt file:\n",str(f))
+        #print("torolt file:\n",str(f))
         os.remove(save_location+"\\"+f)
+
+
 
 

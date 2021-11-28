@@ -4,9 +4,6 @@ import sys
 from matplotlib.dates import DateFormatter
 from openpyxl import load_workbook
 import matplotlib.pyplot as plt
-import math
-from datetime import date
-import datetime
 import pandas as pd
 
 #Ez az excel filebol beolvasott bazisallomas osztaly
@@ -40,8 +37,14 @@ class Gps_data:
         self.age = age
         self.ratio = ratio
 
+#check number of args
+if len(sys.argv) != 6:
+    print("arguments: yyy ddd sss h")
+    print("where: yyy  y=year, ddd=day of year, sss=station id, h=hourly session with abc, uid=user id")
+    print("an example 2021 10 205 a John")
+    exit()
 
-
+#Recommended user inputs
 year=str(sys.argv[1])
 
 doy=str(sys.argv[2])
@@ -52,6 +55,10 @@ time=str(sys.argv[4])
 
 uid=str(sys.argv[5])
 
+
+
+
+#Use of config file to determine save location
 temp=""
 pic_save=""
 file = open('config.txt', 'r')
@@ -64,86 +71,8 @@ file.close()
 
 save_location=temp[6:]
 pic_save=pic_save[10:-1]
-print("pic_save:",pic_save)
 
-#ket valtozo ezek lesznek beallitva a megadott idotartam szerint a megfelelo ertekre, hogy a pos file soraibol a jo adatot olvassa az idonek megfeleloen
-start=0
-stop=0
-
-if(time== 'a'):
-    start = 16
-    stop = 3616
-elif(time == 'b'):
-    start = 3616
-    stop = 7216
-elif(time == 'c'):
-    start = 7216
-    stop = 10816
-elif (time == 'd'):
-    start = 10816
-    stop = 14416
-elif (time == 'e'):
-    start = 14416
-    stop = 18016
-elif (time == 'f'):
-    start = 18016
-    stop = 21616
-elif (time == 'g'):
-    start = 21616
-    stop = 25216
-elif (time == 'h'):
-    start = 25216
-    stop =28816
-elif (time == 'i'):
-    start=28816
-    stop=32416
-elif (time == 'j'):
-    start=32416
-    stop=36016
-elif (time == 'k'):
-    start=36016
-    stop=39616
-elif (time == 'l'):
-    start=39616
-    stop=43216
-elif (time == 'm'):
-    start=43216
-    stop=46816
-elif (time == 'n'):
-    start=46816
-    stop=50416
-elif (time == 'o'):
-    start=50416
-    stop=54016
-elif (time == 'p'):
-    start=54016
-    stop=57616
-elif (time == 'q'):
-    start=57616
-    stop=61216
-elif (time == 'r'):
-    start=61216
-    stop=64816
-elif (time == 's'):
-    start=64816
-    stop=68416
-elif (time == 't'):
-    start=68416
-    stop=72016
-elif (time == 'u'):
-    start=72016
-    stop=75618
-elif (time == 'v'):
-    start=75618
-    stop=79216
-elif (time == 'w'):
-    start=79216
-    stop=82816
-elif (time == 'x'):
-    start=82816
-    stop=86416
-
-#Ez a valtozo tarolja, hogy melyik bazisallomashoz hasonlitsuk a pos filet, ugy hogy ellenorzi a pos file nevet
+#Compare station id to station name
 base_station=0
 station_name=""
 
@@ -183,9 +112,13 @@ elif(station=='210'):
 
 year_for_filename= year[2:]
 station='PildoBox'+station
-file_name=save_location +'\\' + station + year_for_filename + doy + time + '.pos'
+file_name=save_location +'//' + station + year_for_filename + doy + time + '.pos'
 
-dupe_check= pic_save +'\\' + station +"_"+ year+"_" + doy+"_" + time + '.png'
+if not os.path.exists(file_name):
+    print('Position file does not exists!')
+    exit()
+
+dupe_check= pic_save +'//' + station +"_"+ year+"_" + doy+"_" + time + '.png'
 
 
 path = "stations4.xlsx"
@@ -193,12 +126,11 @@ wb = load_workbook(path)
 ws = wb.active
 x = 2
 
-#a bazisallomasok tarolasa
+#Store
 listofbst = []
-#a pos filebol beolvasott adatok tarolasa
-listofpositions = []
 
-#Itt olvassa be a bazisallomasokat az excel filebol
+
+#Read station data from excel file
 while x != 12:
     converter = str(x)
     ID = ws['A' + converter].value
@@ -215,9 +147,11 @@ if os.path.exists(dupe_check):
     print("Duplicate Detected!")
     exit()
 
+#Read position file
 data_gps=pd.read_csv(file_name,header=None,delim_whitespace=True,skiprows=15)
 data_gps.columns=["date", "time", "lat", "lon", "ele", "mode", "nsat", "stdn", "stde", "stdu", "stdne", "stdeu", "stdun", "age", "ratio",]
 
+#Calculate position error in meters
 EW_meters=(data_gps['lon']-listofbst[base_station].long)*21*3600
 NS_meters=(data_gps['lat']-listofbst[base_station].lat)*31*3600
 Elevation=data_gps['ele']-listofbst[base_station].elev
@@ -238,7 +172,7 @@ ax[0].set_ylabel('Difference in meters')
 ax[0].xaxis.set_major_formatter(DateFormatter("%H:%M"))
 ax[0].grid()
 ax[0].set_title('EW-Position')
-plt.savefig(pic_save+'//' + station_name+"_" +year+"_"+doy+"_"+ time + ".png")
+#plt.savefig(pic_save+'//' + station_name+"_" +year+"_"+doy+"_"+ time + ".png")
 
 #NS-graph plot
 ax[1].plot(data_gps['datetime'], NS_meters)
@@ -250,19 +184,33 @@ ax[1].xaxis.set_major_formatter(DateFormatter("%H:%M"))
 ax[1].grid()
 ax[1].set_title('NS-Position')
 fig.set_size_inches(10, 10)
-plt.savefig(pic_save+'//' + station_name+"_" +year+"_"+doy+"_"+ time + ".png",dpi=100)
+plt.savefig(pic_save+'//EW_NS_pos_' + station_name+"_" +year+"_"+doy+"_"+ time + ".png",dpi=100)
 
 #Elevation-graph plot
-fig2, ax2 = plt.subplots()
-ax2.plot(data_gps['datetime'], Elevation)
-ax2.set_ylim([-10, 10])
-ax2.set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(), max(data_gps['datetime']).round('60min').to_pydatetime()]) #show exactly one hour session
-ax2.set_xlabel('time (hh:mm)')
-ax2.set_ylabel('Difference in meters')
-ax2.xaxis.set_major_formatter(DateFormatter("%H:%M"))
-ax2.grid()
-ax2.set_title('Elevation Difference')
-plt.savefig(pic_save+'//Elev_' + station_name+"_" +year+"_"+doy+"_"+ time + ".png",dpi=100)
+fig2, ax2 = plt.subplots(2)
+ax2[0].plot(data_gps['datetime'],Elevation )
+ax2[0].set_ylim([-10, 10])
+ax2[0].set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(), max(data_gps['datetime']).round('60min').to_pydatetime()]) #show exactly one hour session
+ax2[0].set_xlabel('time (hh:mm)')
+ax2[0].set_ylabel('Difference in meters')
+ax2[0].xaxis.set_major_formatter(DateFormatter("%H:%M"))
+ax2[0].grid()
+ax2[0].set_title('Elevation Difference')
+#plt.savefig(pic_save+'//' + station_name+"_" +year+"_"+doy+"_"+ time + ".png",dpi=100)
+
+#Number of satellites
+ax2[1].plot(data_gps['datetime'],data_gps['nsat'])
+ax2[1].set_ylim([0, 15])
+ax2[1].set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(), max(data_gps['datetime']).round('60min').to_pydatetime()]) #show exactly one hour session
+ax2[1].set_xlabel('time (hh:mm)')
+ax2[1].set_ylabel('Number of available satellites')
+ax2[1].xaxis.set_major_formatter(DateFormatter("%H:%M"))
+ax2[1].grid()
+ax2[1].set_title('Number of Satellites')
+fig2.set_size_inches(10, 10)
+plt.savefig(pic_save+'//Elev_Nsat_' + station_name+"_" +year+"_"+doy+"_"+ time + ".png",dpi=100)
+
+print('Graphs created and saved!')
 
 #plt.show()
 
@@ -271,8 +219,7 @@ zip_path= save_location +'\\PildoBox' + station + year_for_filename + doy + time
 for f in os.listdir(save_location):
     if f.endswith('.nav') or f.endswith('.lnav') or f.endswith('.hnav') or f.endswith('.obs') or f.endswith('.pos') or f.endswith('.raw') or f.endswith('.stat') or f.endswith('.sbs'):
         #print("torolt file:\n",str(f))
-        os.remove(save_location+"\\"+f)
-
+        os.remove(save_location+"//"+f)
 
 
 

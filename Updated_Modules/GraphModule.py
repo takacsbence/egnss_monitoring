@@ -4,10 +4,13 @@ import math
 from matplotlib.dates import DateFormatter
 import matplotlib.pyplot as plt
 import pandas as pd
+import json
 
 
 #Ez az excel filebol beolvasott bazisallomas osztaly
 
+def Average(lst):
+    return sum(lst) / len(lst)
 
 class Base_station:
     def __init__(self, id, city, lat, long, elev):
@@ -38,19 +41,24 @@ uid=str(sys.argv[3])
 
 
 #Use of config file to determine save location
-temp=""
 pic_save=""
-file = open('config.txt', 'r')
-for line in file:
-        if(line.split(' ')[0]==sys.argv[3]):
-            temp=line.split(' ')[1]
-            pic_save=line.split(' ')[2]
-
-file.close()
-
-save_location=temp[6:]
-pic_save=pic_save[10:-1]
-
+with open("config.json","r") as f:
+    json_data=json.loads(f.read())
+    f.close()
+    i=0
+    size=len(json_data['Users'])
+    while i!=size:
+        splited=str(json_data['Users'][i]).split(',')
+        user=splited[2]
+        user=user[10:-2]
+        if user==uid:
+            temp=splited[0]
+            temp=temp[10:-1]
+            pictemp=splited[1]
+            pictemp=pictemp[14:-1]
+            pic_save=pictemp
+            save_location=temp
+        i=i+1
 
 station='PildoBox'+station
 file_name=save_location +'//'+pos_file+'.pos'
@@ -66,13 +74,18 @@ data_stations.columns=["id","city","lat","long","elev"]
 idx=data_stations[data_stations['id']==station].index.item()
 
 
-
-
-
 #Read position file
 data_gps=pd.read_csv(file_name,header=None,delim_whitespace=True,skiprows=15)
 data_gps.columns=["date", "time", "lat", "lon", "ele", "mode", "nsat", "stdn", "stde", "stdu", "stdne", "stdeu", "stdun", "age", "ratio"]
 
+times=[]
+i=0
+while i!=len(data_gps['time']):
+    splitted=str(data_gps['time'][i]).split(':')
+    hour=splitted[0]
+    minute=splitted[1]
+    sec=splitted[2]
+    i=i+1
 
 dlat = math.pi / 180 * 6380000 / 3600
 
@@ -89,15 +102,8 @@ data_gps['datetime'] = pd.to_datetime(data_gps['date'] + ' ' + data_gps['time'],
 fig, ax = plt.subplots()
 fig.set_size_inches(10,10)
 
-#ax2=ax.twinx()
-#ax2.set_ylim([-10,20])
-#ax2.set_ylabel('Number of Satellites')
-#fig.tight_layout()
-
-
-
 #EW-graph plot
-ax.plot(data_gps['datetime'], EW_meters,label='EW-pos')
+ax.plot(data_gps['datetime'], EW_meters,label='East-West')
 ax.set_ylim([-5,20])
 ax.set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(), max(data_gps['datetime']).round('60min').to_pydatetime()]) #show exactly one hour session
 ax.set_xlabel('time (hh:mm)')
@@ -106,7 +112,7 @@ ax.xaxis.set_major_formatter(DateFormatter("%H:%M"))
 
 
 #NS-graph plot
-ax.plot(data_gps['datetime'], NS_meters,label='NS-pos')
+ax.plot(data_gps['datetime'], NS_meters,label='North-South')
 #ax.set_ylim([-4,4])
 ax.set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(), max(data_gps['datetime']).round('60min').to_pydatetime()]) #show exactly one hour session
 ax.set_xlabel('time (hh:mm)')
@@ -123,20 +129,20 @@ ax.set_xlabel('time (hh:mm)')
 ax.set_ylabel('Difference in meters')
 ax.xaxis.set_major_formatter(DateFormatter("%H:%M"))
 
-
-#Secondary Y axis for satellite
-
-
 #Number of satellites
-ax.plot(data_gps['datetime'],data_gps['nsat'],label='Satellites')
+ax.plot(data_gps['datetime'],data_gps['nsat'],label='Number of Satellites')
 ax.set_ylim([-10, 20])
 ax.set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(), max(data_gps['datetime']).round('60min').to_pydatetime()]) #show exactly one hour session
 ax.set_xlabel('time (hh:mm)')
-ax.set_ylabel('Differences in meters')
+ax.set_ylabel('Meters/Number of Sattelites')
 ax.xaxis.set_major_formatter(DateFormatter("%H:%M"))
+plt.text(data_gps['datetime'][2000],19,"EW: avarage:"+str(round(Average(EW_meters),2))+" min:"+str(round(min(EW_meters),2))+" max:"+str(round(max(EW_meters),2)),fontsize=10)
+plt.text(data_gps['datetime'][2000],18.5,"NS: avarage:"+str(round(Average(NS_meters),2))+" min:"+str(round(min(NS_meters),2))+" max:"+str(round(max(NS_meters),2)),fontsize=10)
+plt.text(data_gps['datetime'][2000],18,"Elevation: avarage:"+str(round(Average(Elevation),2))+" min:"+str(round(min(Elevation),2))+" max:"+str(round(max(Elevation),2)),fontsize=10)
 plt.grid()
-ax.set_title('EW | NS | Elev | NoS')
+ax.set_title('Position Error Graphs')
 plt.legend(loc='upper left')
+
 plt.savefig(pic_save+'//' + pos_file + ".png",dpi=100)
 
 
@@ -150,7 +156,4 @@ for f in os.listdir(save_location):
     if f.endswith('.nav') or f.endswith('.lnav') or f.endswith('.hnav') or f.endswith('.obs') or f.endswith('.pos') or f.endswith('.raw') or f.endswith('.stat') or f.endswith('.sbs'):
 
         os.remove(save_location+"//"+f)
-
-
-
 

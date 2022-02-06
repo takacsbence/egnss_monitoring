@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "user": "Lehel",
+      "data": "C:\\Paripa\\Downloaded_zips Pictures",
+      "pictures": "C:\\Paripa\\Position_Error_Graphs"
+    },
+    {
+      "user": "Bence",
+      "data": "valami",
+      "pictures": "valami"
+    }
+  ]
+}

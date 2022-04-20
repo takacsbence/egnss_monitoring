@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+#Ennek a programnak a celja hogy eloallitsa a pozicio filet amit abrazolunk egy kesobbi modullal, egy input kell a usertol az pedig a mod ami megadja hogy SPP vagy RTK
+#Mivel automatikusan fog futni igy ugy terveztem hogy az SPP mindig megcsinalja egyszerre az elozo naphoz tartozo kepeket mig az RTK modszer pedig az adott napon
+#orankent fut es csinalja a kepeket, a vegen pedig a program torli a felesleges fileokat
 
 import os
 import zipfile

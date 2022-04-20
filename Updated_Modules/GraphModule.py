@@ -99,9 +99,6 @@ def PosEvaluator(conn,filename,type):
     data_gps['datetime'] = pd.to_datetime(data_gps['date'] + ' ' + data_gps['time'], format='%Y/%m/%d %H:%M:%S.%f')
     print('\n date:',data_gps['datetime'][10])
 
-    #fist_obs=data_gps['datetime'][0]
-    #last_obs=data_gps['datetime'][3598]
-
     fig, ax = plt.subplots()
     fig.set_size_inches(10, 10)
 
@@ -116,14 +113,13 @@ def PosEvaluator(conn,filename,type):
 
     # NS-graph plot
     ax.plot(data_gps['datetime'], NS_meters, label='North-South')
-    # ax.set_ylim([-5,5])
     ax.set_xlim([min(data_gps['datetime']).round('60min').to_pydatetime(),
                  max(data_gps['datetime']).round('60min').to_pydatetime()])  # show exactly one hour session
     ax.set_xlabel('time (hh:mm)')
     ax.set_ylabel('Difference in meters')
     ax.xaxis.set_major_formatter(DateFormatter("%H:%M"))
     fig.set_size_inches(10, 10)
-    # plt.savefig(pic_save+'//' + station_name+"_" +year+"_"+doy+"_"+ time + ".png",dpi=100)
+    
 
     # Elevation-graph plot
     ax.plot(data_gps['datetime'], Elevation, label='Elevation')
@@ -144,7 +140,8 @@ def PosEvaluator(conn,filename,type):
     ax.set_xlabel('time (hh:mm)')
     ax2.set_ylabel('Number of Sattelites')
     ax.xaxis.set_major_formatter(DateFormatter("%Y/%m/%d %H:%M"))
-    #Statisztikai adatok elkeszitese a grafikonra
+    
+    #Statisztikai adatok elkeszitese a grafikonra atlag, min, max, szoras harom tizeddesre kerekitve
     plt.text(data_gps['datetime'][1000], 19, "EW: avarage:" + str(round(EW_meters.mean(), 3)) + " min:" + str(
         round(min(EW_meters), 3)) + " max:" + str(round(max(EW_meters), 3))+ " Spread: " +str(round(statistics.variance(EW_meters),3)), fontsize=10)
     plt.text(data_gps['datetime'][1000], 18.5, "NS: avarage:" + str(round(NS_meters.mean(), 3)) + " min:" + str(
@@ -152,10 +149,9 @@ def PosEvaluator(conn,filename,type):
     plt.text(data_gps['datetime'][1000], 18, "Elevation: avarage:" + str(round(Elevation.mean(), 3)) + " min:" + str(
         round(min(Elevation), 3)) + " max:" + str(round(max(Elevation), 3)) + " Spread: "+str(round(statistics.variance(Elevation),3)), fontsize=10)
        
-    
-
     ax.set_title(type+' Position Error Graph')
-    #Tengelyek beallitasa
+    
+    #Tengelyek beallitasa es jelmagyarazat elhelyezese
     h1, l1 = ax.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
     ax.legend(h1 + h2, l1 + l2, loc='upper left')

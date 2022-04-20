@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+#A program kap inputkent egy masik modulbol egy pos filet azt hogy melyik roverhez viszonyitsa az adott pos file ertekeit egy mode ami annyit csinal hogy SPP vagy RTK
+#Ezutan a program eloallitja a True Position Error graphot az adott pos file ertekibol, legvegul pedig a statisztikat elmenti egy adatbazisba(work in proggres)
+
 import os.path
 import sys
 import math

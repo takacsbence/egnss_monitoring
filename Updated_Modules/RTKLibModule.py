@@ -5,47 +5,126 @@ import os
 import zipfile
 from os.path import exists
 import platform
-from datetime import date,datetime
+from datetime import date, datetime, timedelta
 import sys
 
-todays_date = date.today()
-doy = date.today().strftime("%j")
-print('doy:'+doy)
+def hour2session(hour):
+    session_list = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w']
+    return session_list[int(hour)]
 
-real_day=doy
+if __name__ == "__main__":
 
-#real_day='0'+str(real_day)
+    #user input
+    station = sys.argv[1]
+
+    #date and time parameters
+    last_hour_date_time = datetime.utcnow() - timedelta(hours = 1)
+    doy = last_hour_date_time.strftime("%j")
+    year = last_hour_date_time.strftime("%Y")
+    year2 = last_hour_date_time.strftime("%y")
+    hour = last_hour_date_time.strftime("%H")
+
+    #convert hour to abc session
+    session = hour2session(hour)
+    print(year2, doy, hour, session)
+
+    #input and output data folders
+    raw_data_folder = '/home/tbence/HC/data/Y' + year + '/D' + doy + '/PildoBox' + station + '/' #raw data
+    save_location = '/home/hegyi/Paripa/Downloaded_zips'            #pos files
+    ref_data_save = '/home/hegyi/Paripa/Reference_for_Kinematic'    #reference station data
+    #TB átírtam tbence-re
+    unzipped_raw_data_folder = '/home/tbence/Paripa/Downloaded_zips/Y' + year + '/D' + doy + '/PildoBox' + station  + '/' #processed data folder
+    conf_folder = '/home/tbence/Paripa/conf/'
+    
+    #unzip raw file
+    raw_data_file = 'PildoBox' + station + year2 + doy + session + ".raw.zip"
+    
+    if exists(raw_data_folder + raw_data_file):
+        with zipfile.ZipFile(raw_data_folder + raw_data_file, 'r') as zip_file:
+            zip_file.extractall(unzipped_raw_data_folder)
+    
+    raw_data_file = raw_data_file[:-4]
+
+    #convert RTCM raw binary reference file to RINEX
+    hour2 = f'{int(hour):02d}'
+    rtcm_folder = '/home/hegyi/Paripa/Reference_for_Kinematic/'
+    rtcm_file_name = 'PildoBox205' + year + doy + hour2 + '.rtcm3'
+    if exists(rtcm_folder + rtcm_file_name):
+        ref_obs_file = 'Ref' + station + year2 + doy + session + ".obs"
+        convert_rtcm = "convbin " + rtcm_folder + rtcm_file_name + " -r rtcm3 -v 3.03 -o " + unzipped_raw_data_folder + ref_obs_file
+        os.system(convert_rtcm)
+    
+    #convert septentrio raw binary files to RINEX
+    if exists(unzipped_raw_data_folder + raw_data_file):
+        #observation file
+        obs_file = raw_data_file[:-3] + 'obs'
+        convert_to_Rinex = "convbin " + unzipped_raw_data_folder + raw_data_file + " -v 3.03 -r sbf -d " + unzipped_raw_data_folder
+        os.system(convert_to_Rinex)    
+
+        #navigation file, mixed
+        nav_file = raw_data_file[:-3] + 'nav'
+        convert_to_Rinex = "/opt/Septentrio/RxTools/bin/sbf2rin -f " + unzipped_raw_data_folder + raw_data_file + " -R3 -n P -o " + unzipped_raw_data_folder + nav_file
+        os.system(convert_to_Rinex)    
+
+    #post processing
+        #SPP - GPS
+        pos_file = raw_data_file[:-4] + '_spp.pos'
+        conf = conf_folder + 'SSSS_sps.conf'
+        pp = "rnx2rtkp -k " + conf + " -p 0 " + unzipped_raw_data_folder + obs_file + " " \
+                + unzipped_raw_data_folder + nav_file + " -o " + unzipped_raw_data_folder + pos_file
+        os.system(pp)
+        #generate plots
+        gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 0"
+        os.system(gr)
+
+        #SPP - GPS+GAL
+        pos_file = raw_data_file[:-4] + '_spp_G.pos'
+        conf = conf_folder + 'SSSS_sps_gal.conf'
+        pp = "rnx2rtkp -k " + conf + " -p 0 " + unzipped_raw_data_folder + obs_file + " " \
+                + unzipped_raw_data_folder + nav_file + " -o " + unzipped_raw_data_folder + pos_file
+        os.system(pp)
+        #generate plots
+        gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 0"
+        os.system(gr)
+
+        #SBAS - GPS
+        sbs_file = raw_data_file[:-3] + 'sbs'
+        pos_file = raw_data_file[:-4] + '_sbas.pos'
+        conf = conf_folder + 'SSSS_sbs.conf'
+        pp = "rnx2rtkp -k " + conf + " -p 0 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + sbs_file + " " \
+                + unzipped_raw_data_folder + nav_file + " -o " + unzipped_raw_data_folder + pos_file
+        os.system(pp)
+
+        #RTK - GPS
+        pos_file = raw_data_file[:-4] + '_rtk.pos'
+        conf = conf_folder + 'SSSS_rtk.conf'
+        pp = "rnx2rtkp -k " + conf + " -p 2 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + ref_obs_file + " " \
+                + unzipped_raw_data_folder + nav_file + " -r 4082000.76208 1410145.36158 4678053.28773" + " -o " + unzipped_raw_data_folder + pos_file
+        os.system(pp)
+        #generate plots
+        gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 1"
+        os.system(gr)
+
+        #RTK - GPS+GAL
+        pos_file = raw_data_file[:-4] + '_rtk_G.pos'
+        conf = conf_folder + 'SSSS_rtk_gal.conf'
+        pp = "rnx2rtkp -k " + conf + " -p 2 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + ref_obs_file + " " \
+                + unzipped_raw_data_folder + nav_file + " -r 4082000.76208 1410145.36158 4678053.28773" + " -o " + unzipped_raw_data_folder + pos_file
+        os.system(pp)
+        #generate plots
+        gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 1"
+        os.system(gr)
+
+'''
 
 
 
-os_type=''
 
-if platform.system()=='Linux':
-    os_type='Linux'
-if platform.system()=='Windows':
-    os_type='Windows'
-if platform.system()=='Darwin':
-    os_type='Darwin'
-
-
-year=str(todays_date.year)
-
-url = 'http://152.66.5.8/~tbence/hc/data/'
-
-mode=sys.argv[1]
-
-
-save_location='/home/hegyi/Paripa/Downloaded_zips'
-ref_data_save='/home/hegyi/Paripa/Reference_for_Kinematic'
-
-mirror='/home/tbence/HC/data/Y'+year+'/D'+doy
-mirror2='/home/tbence/HC/data/Y'+year+'/D'+real_day
 
 
 
 def evalFiles(station,timer,container,prev_time):
 
-    year_for_filename = year[2:]
     station_number=station
     files=mirror+'/PildoBox'+str(station)+'/PildoBox' + str(station) + year_for_filename + str(doy) + timer + ".raw.zip"
     files_for_hourly=mirror2+'/PildoBox'+str(station)+'/PildoBox' + str(station) + year_for_filename + real_day + timer + ".raw.zip"
@@ -58,16 +137,12 @@ def evalFiles(station,timer,container,prev_time):
     
 
     print('zip:'+zip_path)
-    if exists(zip_path):
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(save_location)
 
     file_to_convert = "PildoBox" + str(station) + year_for_filename + str(doy) + timer + ".raw"
     file_to_convert2 = "PildoBox" + str(station) + year_for_filename + real_day + timer + ".raw"
 
     year_for_filename = year[2:]
 
-    convert_to_Rinex = "convbin " + save_location + "/" + file_to_convert + " -v 3.03 -r sbf -f 1 -y J,C,S,R,E -d " + save_location
     convert_hourly="convbin " + save_location + "/" + file_to_convert2 + " -v 3.03 -r sbf -f 1 -y J,C,S,R,E -d " + save_location
 
     #Navigacios fileok eloallitasa SPP
@@ -186,7 +261,7 @@ def evalFiles(station,timer,container,prev_time):
                 os.remove(save_location+'/'+str(doy)+container+'/'+f)
     
 
-time_stamps=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w']
+
 
 check=0
 flag=0
@@ -228,3 +303,4 @@ if mode.__eq__('1'):
 for f in os.listdir(save_location):
     if f.endswith('.rnx') or f.endswith('.gz'):
         os.remove(save_location +"//" + f)
+'''

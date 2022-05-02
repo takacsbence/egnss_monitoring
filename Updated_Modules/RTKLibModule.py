@@ -23,9 +23,13 @@ if __name__ == "__main__":
     year = last_hour_date_time.strftime("%Y")
     year2 = last_hour_date_time.strftime("%y")
     hour = last_hour_date_time.strftime("%H")
+    last_hour = datetime.utcnow() - timedelta(hours = 2)
+    prev_time = last_hour.strftime("%H")
+    print('hr:'+hour,'prev:'+prev_time)
 
     #convert hour to abc session
     session = hour2session(hour)
+    session2 = hour2session(prev_time)
     print(year2, doy, hour, session)
 
     #input and output data folders
@@ -33,7 +37,8 @@ if __name__ == "__main__":
     save_location = '/home/hegyi/Paripa/Downloaded_zips'            #pos files
     ref_data_save = '/home/hegyi/Paripa/Reference_for_Kinematic'    #reference station data
     #TB átírtam tbence-re
-    unzipped_raw_data_folder = '/home/tbence/Paripa/Downloaded_zips/Y' + year + '/D' + doy + '/PildoBox' + station  + '/' #processed data folder
+    #unzipped_raw_data_folder = '/home/tbence/Paripa/Downloaded_zips/Y' + year + '/D' + doy + '/PildoBox' + station  + '/' #processed data folder
+    unzipped_raw_data_folder = '/home/hegyi/Paripa/Downloaded_zips/Y' + year + '/D' + doy + '/PildoBox' + station  + '/' #processed data folder
     conf_folder = '/home/tbence/Paripa/conf/'
     
     #unzip raw file
@@ -47,74 +52,105 @@ if __name__ == "__main__":
 
     #convert RTCM raw binary reference file to RINEX
     hour2 = f'{int(hour):02d}'
-    rtcm_folder = '/home/hegyi/Paripa/Reference_for_Kinematic/'
-    rtcm_file_name = 'PildoBox205' + year + doy + hour2 + '.rtcm3'
+    #rtcm_folder = '/home/hegyi/Paripa/Reference_for_Kinematic/BME10/'
+    rtcm_folder = '/home/tbence/Paripa/Reference_for_Kinematic/BUTE0/'
+    #rtcm_file_name = 'Ref' + year2 + doy + hour2 + '.rtcm'
+    rtcm_file_name = 'BUTE0' + year2 + doy + hour2 + '.rtcm'
+    print('FName:',rtcm_folder+rtcm_file_name)
+    
     if exists(rtcm_folder + rtcm_file_name):
-        ref_obs_file = 'Ref' + station + year2 + doy + session + ".obs"
-        convert_rtcm = "convbin " + rtcm_folder + rtcm_file_name + " -r rtcm3 -v 3.03 -o " + unzipped_raw_data_folder + ref_obs_file
+        #ref_obs_file = 'Ref' + station + year2 + doy + session + ".obs"
+        ref_obs_file = 'BUTE0' + station + year2 + doy + session + ".obs"
+        convert_rtcm = "/usr/local/bin/convbin " + rtcm_folder + rtcm_file_name + " -r rtcm3 -v 3.03 -o " + unzipped_raw_data_folder + ref_obs_file
+        print(convert_rtcm)
         os.system(convert_rtcm)
+        
     
     #convert septentrio raw binary files to RINEX
     if exists(unzipped_raw_data_folder + raw_data_file):
         #observation file
         obs_file = raw_data_file[:-3] + 'obs'
-        convert_to_Rinex = "convbin " + unzipped_raw_data_folder + raw_data_file + " -v 3.03 -r sbf -d " + unzipped_raw_data_folder
-        os.system(convert_to_Rinex)    
+        convert_to_Rinex = "/usr/local/bin/convbin " + unzipped_raw_data_folder + raw_data_file + " -v 3.03 -r sbf -d " + unzipped_raw_data_folder
+        os.system(convert_to_Rinex)
+               
 
         #navigation file, mixed
         nav_file = raw_data_file[:-3] + 'nav'
         convert_to_Rinex = "/opt/Septentrio/RxTools/bin/sbf2rin -f " + unzipped_raw_data_folder + raw_data_file + " -R3 -n P -o " + unzipped_raw_data_folder + nav_file
-        os.system(convert_to_Rinex)    
+        if int(hour) % 2 == 1:
+            nav_file = nav_file[:-5] + session2 + '.nav'
+            #convert_to_Rinex = "/opt/Septentrio/RxTools/bin/sbf2rin -f " + unzipped_raw_data_folder + raw_data_file + " -R3 -n P -o " + unzipped_raw_data_folder + nav_file
+            print('Bad_NAV:'+nav_file)
+        else :
+            print('GOOD nav')
+        os.system(convert_to_Rinex)
+        
+                   
 
     #post processing
         #SPP - GPS
         pos_file = raw_data_file[:-4] + '_spp.pos'
         conf = conf_folder + 'SSSS_sps.conf'
-        pp = "rnx2rtkp -k " + conf + " -p 0 " + unzipped_raw_data_folder + obs_file + " " \
+        pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + unzipped_raw_data_folder + obs_file + " " \
                 + unzipped_raw_data_folder + nav_file + " -o " + unzipped_raw_data_folder + pos_file
         os.system(pp)
         #generate plots
-        gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 0"
-        os.system(gr)
-
+        le = "python3 /home/hegyi/Paripa/Paripa1/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 0"
+        #gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 0"
+        os.system(le)
+        
+        
         #SPP - GPS+GAL
         pos_file = raw_data_file[:-4] + '_spp_G.pos'
         conf = conf_folder + 'SSSS_sps_gal.conf'
-        pp = "rnx2rtkp -k " + conf + " -p 0 " + unzipped_raw_data_folder + obs_file + " " \
+        pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + unzipped_raw_data_folder + obs_file + " " \
                 + unzipped_raw_data_folder + nav_file + " -o " + unzipped_raw_data_folder + pos_file
         os.system(pp)
         #generate plots
-        gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 0"
-        os.system(gr)
+        le = "python3 /home/hegyi/Paripa/Paripa1/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 0"
+        #gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 0"
+        os.system(le)
 
         #SBAS - GPS
         sbs_file = raw_data_file[:-3] + 'sbs'
         pos_file = raw_data_file[:-4] + '_sbas.pos'
         conf = conf_folder + 'SSSS_sbs.conf'
-        pp = "rnx2rtkp -k " + conf + " -p 0 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + sbs_file + " " \
+        pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + sbs_file + " " \
                 + unzipped_raw_data_folder + nav_file + " -o " + unzipped_raw_data_folder + pos_file
         os.system(pp)
 
         #RTK - GPS
         pos_file = raw_data_file[:-4] + '_rtk.pos'
         conf = conf_folder + 'SSSS_rtk.conf'
-        pp = "rnx2rtkp -k " + conf + " -p 2 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + ref_obs_file + " " \
-                + unzipped_raw_data_folder + nav_file + " -r 4082000.76208 1410145.36158 4678053.28773" + " -o " + unzipped_raw_data_folder + pos_file
+        #pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + ref_obs_file + " " \
+        #        + unzipped_raw_data_folder + nav_file + " -r 4082001.389 1410144.844 4678052.918" + " -o " + unzipped_raw_data_folder + pos_file
+        pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + ref_obs_file + " " \
+                + unzipped_raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + unzipped_raw_data_folder + pos_file
         os.system(pp)
         #generate plots
-        gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 1"
-        os.system(gr)
+        le = "python3 /home/hegyi/Paripa/Paripa1/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 1"
+        #gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 1"
+        os.system(le)
 
         #RTK - GPS+GAL
         pos_file = raw_data_file[:-4] + '_rtk_G.pos'
         conf = conf_folder + 'SSSS_rtk_gal.conf'
-        pp = "rnx2rtkp -k " + conf + " -p 2 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + ref_obs_file + " " \
-                + unzipped_raw_data_folder + nav_file + " -r 4082000.76208 1410145.36158 4678053.28773" + " -o " + unzipped_raw_data_folder + pos_file
+        #pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + ref_obs_file + " " \
+        #        + unzipped_raw_data_folder + nav_file + " -r 4082001.389 1410144.844 4678052.918" + " -o " + unzipped_raw_data_folder + pos_file
+        pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + unzipped_raw_data_folder + obs_file + " " + unzipped_raw_data_folder + ref_obs_file + " " \
+                + unzipped_raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + unzipped_raw_data_folder + pos_file
         os.system(pp)
         #generate plots
-        gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 1"
-        os.system(gr)
-
+        #gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 1"
+        le = "python3 /home/hegyi/Paripa/Paripa1/GraphModule.py " + unzipped_raw_data_folder + pos_file + " " + station + " 1"
+        
+        os.system(le)
+        
+        delete_path = save_location + '/Y' + year + '/D' + doy + '/PildoBox' + station + '/'
+        for f in os.listdir(delete_path):
+            if f.endswith('.lnav') or f.endswith('.obs') or f.endswith('.raw') or f.endswith('.stat') or f.endswith('_events.pos'):
+                os.remove(delete_path + f)
+        
 '''
 
 

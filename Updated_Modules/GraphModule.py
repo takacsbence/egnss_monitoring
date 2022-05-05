@@ -17,7 +17,6 @@ import psycopg2
 def header_lines(posfile):
 
     """ get data from RTKLIB position file header
-
         :param:     RTKLIB pos file
         :returns:   the number of header lines (header lines strats by "%")
                     solution mode (single, kinematic)
@@ -42,13 +41,11 @@ def header_lines(posfile):
 
 def plot_gen(data, mode, navi_sys, station, pic_name):
     """ generate true position error plots
-
         :param: pandas dataframe with data
         :param: solutuion mode, like single or kinematic
         :param: navigation system, like GPS or GPS GALILEO
         :param: station id, like 205
         :param: plot image file name
-
     """
 
     fig, ax = plt.subplots()
@@ -117,13 +114,11 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
 
 def dbase_write(dbase_name, data, station, mode, navi_sys):
     """ write statistical parameters into psql database
-
         :param: psql data base name
                 pandas dataframe with data
                 station id
                 positioning mode
                 navigation sytems
-
     """
 
     #statistical parameters
@@ -164,7 +159,7 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
 if __name__ == "__main__":
 
     #check number of arguments
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 6:
         print('wrong number of arguments')
         print('use', sys.argv[0], pos_file_path, pos_file_name, station)
         exit()
@@ -173,11 +168,14 @@ if __name__ == "__main__":
     pos_file_path = str(sys.argv[1])
     pos_file_name = str(sys.argv[2])
     station = str(sys.argv[3])
+    year = str(sys.argv[4])
+    doy = str(sys.argv[5])
     pos_file = pos_file_path + pos_file_name
 
     #output file
     #tbence átírandó hegyi-re !!!!!
-    pic_save = Path('/home/tbence/public_html/Position_Error_Graphs/' + pos_file_path[-23:])
+    #pic_save = Path('/home/tbence/public_html/Position_Error_Graphs/' + pos_file_path[-23:])
+    pic_save = Path('/home/hegyi/public_html/Position_Error_Graphs/Y' + year + '/D' + doy +'/PildoBox' + station )
     pic_save.mkdir(parents=True, exist_ok=True)
     pic_name = str(pic_save) + '/' + pos_file_name[:-3] + 'png'
     print(pic_name)
@@ -221,5 +219,6 @@ if __name__ == "__main__":
 
     #write statistical parameters into psql database
     #tbence átírandó hegyi-re !!!!!
-    dbase_name = "tbence"
+    #dbase_name = "tbence"
+    dbase_name = "hegyi"
     dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys)

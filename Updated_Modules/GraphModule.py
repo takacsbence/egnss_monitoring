@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
-"""generate true position error plot from RTKLIB pos file"""
+"""
+    generate true position error plot from RTKLIB pos file
+    add statistical parameters into database
+"""
 
 from pathlib import Path
 import sys
@@ -9,6 +12,7 @@ import pandas as pd
 from matplotlib.dates import DateFormatter
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import psycopg2
 
 def header_lines(posfile):
 
@@ -111,6 +115,52 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
     #save plot as an image
     plt.savefig(pic_name, dpi=100)
 
+def dbase_write(dbase_name, data, station, mode, navi_sys):
+    """ write statistical parameters into psql database
+
+        :param: psql data base name
+                pandas dataframe with data
+                station id
+                positioning mode
+                navigation sytems
+
+    """
+
+    #statistical parameters
+    nr_of_epochs = data.shape[0]    #number of epochs
+    dtmin = min(data['datetime'])   #date and time of the first position
+
+    #data base connection
+    conn = psycopg2.connect("dbname=" + dbase_name)
+
+    #create a cursor
+    cur = conn.cursor()
+
+    #create table
+    sql_create_table = "CREATE TABLE IF NOT EXISTS rtk_stats ( \
+        id SERIAL PRIMARY KEY, \
+        station_ID INT, \
+        datetime TIMESTAMP, \
+        nr_of_epochs INT, \
+        mode VARCHAR, \
+        navi_sys VARCHAR);"
+    cur.execute(sql_create_table)
+
+    #insert a new row
+    sql_insert_row = "INSERT INTO rtk_stats(station_id, nr_of_epochs, mode, navi_sys, datetime) VALUES ({}, {}, '{}', '{}', '{}')".format(station, nr_of_epochs, mode, navi_sys, dtmin)
+    #print(sql_insert_row)
+    cur.execute(sql_insert_row)
+
+    #querry all data, just for testing
+    #cur.execute('SELECT * from rtk_stats')
+    #s = cur.fetchall()
+    #print(s)
+
+    # close the communication with the PostgreSQL
+    conn.commit()
+    cur.close()
+    conn.close()
+
 if __name__ == "__main__":
 
     #check number of arguments
@@ -168,3 +218,8 @@ if __name__ == "__main__":
 
     #generate plots
     plot_gen(data_gps, mode, navi_sys, station, pic_name)
+
+    #write statistical parameters into psql database
+    #tbence átírandó hegyi-re !!!!!
+    dbase_name = "tbence"
+    dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys)

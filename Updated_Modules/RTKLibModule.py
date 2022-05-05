@@ -66,7 +66,6 @@ def raw_file(work_folder, station, dt):
 
     #processed data folder
     raw_data_folder = work_folder + 'Y' + year + '/D' + doy + '/PildoBox' + station  + '/'
-    raw_data_folder = work_folder
 
     #raw file name
     raw_data_file = 'PildoBox' + station + year2 + doy + session + ".raw.zip"
@@ -95,6 +94,8 @@ if __name__ == "__main__":
     conf_folder = '/home/tbence/Paripa/conf/'
     #working folder
     work_folder = '/home/tbence/Paripa/Downloaded_zips/'
+    #GraphModule folder
+    graph = "/home/tbence/Paripa/"
 
     for station in stations:
 
@@ -136,7 +137,7 @@ if __name__ == "__main__":
             pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
             os.system(gr)
 
             #SPP - GPS+GAL
@@ -146,7 +147,7 @@ if __name__ == "__main__":
                     + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
             os.system(gr)
 
             #SBAS - GPS
@@ -157,7 +158,7 @@ if __name__ == "__main__":
                     + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
             os.system(gr)
 
             #RTK - GPS
@@ -167,9 +168,9 @@ if __name__ == "__main__":
                     + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
             os.system(gr)
-
+            
             #RTK - GPS+GAL
             pos_file = raw_data_file[:-4] + '_rtk_G.pos'
             conf = conf_folder + 'SSSS_rtk_gal.conf'
@@ -177,8 +178,8 @@ if __name__ == "__main__":
                     + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 /home/tbence/RTK_lib_automatizalas/Updated_Modules/GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
             os.system(gr)
 
         #delete raw data folder
-        shutil.rmtree(raw_data_folder)
+        #shutil.rmtree(raw_data_folder)

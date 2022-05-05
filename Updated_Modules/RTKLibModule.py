@@ -16,7 +16,6 @@ import shutil
 
 def hour2session(hour):
     """ get abc session from hour, a = 0, b = 1, ...
-
         :param:     hour
         :returns:   abc session
     """
@@ -27,7 +26,6 @@ def hour2session(hour):
 
 def date2doy(dt):
     """ get date and time parameters from computer time
-
         :param:     dt timedelta in hour
         :returns:   year (4 characters)
                     year2 last two characters of the year
@@ -44,10 +42,13 @@ def date2doy(dt):
     hour2 = f'{int(hour):02d}'
 
     return year, year2, doy, hour, hour2
+        
+def GraphCaller():
+    call = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " +station + " " + year + " " + doy
+    os.system(call)
 
 def raw_file(work_folder, station, dt):
     """ get raw file name and path from date and time parameters
-
         :param:     folder where temporary files are stored
                     station id, like 205
                     timedelta in hours
@@ -93,9 +94,9 @@ if __name__ == "__main__":
     #conf file folder
     conf_folder = '/home/tbence/Paripa/conf/'
     #working folder
-    work_folder = '/home/tbence/Paripa/Downloaded_zips/'
+    work_folder = '/home/hegyi/Paripa/Downloaded_zips/'
     #GraphModule folder
-    graph = "/home/tbence/Paripa/"
+    graph = "/home/hegyi/Paripa/Paripa1/"
 
     for station in stations:
 
@@ -137,8 +138,9 @@ if __name__ == "__main__":
             pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            os.system(gr)
+            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            #os.system(gr)
+            GraphCaller()
 
             #SPP - GPS+GAL
             pos_file = raw_data_file[:-4] + '_spp_G.pos'
@@ -147,8 +149,9 @@ if __name__ == "__main__":
                     + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            os.system(gr)
+            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            #os.system(gr)
+            GraphCaller()
 
             #SBAS - GPS
             sbs_file = raw_data_file[:-3] + 'sbs'
@@ -158,8 +161,9 @@ if __name__ == "__main__":
                     + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            os.system(gr)
+            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            #os.system(gr)
+            GraphCaller()
 
             #RTK - GPS
             pos_file = raw_data_file[:-4] + '_rtk.pos'
@@ -168,8 +172,9 @@ if __name__ == "__main__":
                     + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            os.system(gr)
+            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            #os.system(gr)
+            GraphCaller()
             
             #RTK - GPS+GAL
             pos_file = raw_data_file[:-4] + '_rtk_G.pos'
@@ -178,8 +183,25 @@ if __name__ == "__main__":
                     + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
             os.system(pp)
             #generate plots
-            gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            os.system(gr)
+            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
+            #os.system(gr)
+            GraphCaller()
+            
+            #DGPS - GPS
+            pos_file = raw_data_file[:-4] + '_dgps.pos'
+            conf = conf_folder + 'SSSS_dgps.conf'
+            pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + raw_data_folder + obs_file + " " + raw_data_folder + ref_obs_file + " " \
+                    + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
+            os.system(pp)
+            GraphCaller()
+            
+            #DGPS - GPS+GAL
+            pos_file = raw_data_file[:-4] + '_dgps_G.pos'
+            conf = conf_folder + 'SSSS_dgps_gal.conf'
+            pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + raw_data_folder + obs_file + " " + raw_data_folder + ref_obs_file + " " \
+                    + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
+            os.system(pp)
+            GraphCaller()
 
         #delete raw data folder
         #shutil.rmtree(raw_data_folder)

@@ -13,6 +13,7 @@ import os
 import zipfile
 from datetime import datetime, timedelta
 import shutil
+import pandas as pd
 
 def hour2session(hour):
     """ get abc session from hour, a = 0, b = 1, ...
@@ -42,9 +43,12 @@ def date2doy(dt):
     hour2 = f'{int(hour):02d}'
 
     return year, year2, doy, hour, hour2
-        
-def GraphCaller():
-    call = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " +station + " " + year + " " + doy
+
+def graph_caller():
+    """
+        call GraphModule.py to plot true position errors
+    """
+    call = "python3 " + graph_folder + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station + " " + year + " " + doy
     os.system(call)
 
 def raw_file(work_folder, station, dt):
@@ -86,19 +90,34 @@ def raw_file(work_folder, station, dt):
 if __name__ == "__main__":
 
     #list of stations
-    stations = ['205', '215']   #more stations
-    stations = ['205']  #just one station, for testing
+    rov_stations = ['205', '207', '215']
+    ref_stations = ['BUTE0', 'ZZON0', 'BUTE0']
 
     #reference station data folder
     ref_data_save = '/home/tbence/Paripa/Reference_for_Kinematic/'
     #conf file folder
     conf_folder = '/home/tbence/Paripa/conf/'
     #working folder
-    work_folder = '/home/hegyi/Paripa/Downloaded_zips/'
+    work_folder = '/home/tbence/Paripa/Downloaded_zips/'
     #GraphModule folder
-    graph = "/home/hegyi/Paripa/Paripa1/"
+    graph_folder = '/home/tbence/Paripa/'
 
-    for station in stations:
+    #load ref_stations.txt file with true position of reference stations
+    ref_stations_data = pd.read_csv('/home/tbence/Paripa/ref_stations.txt',
+                                    header=None, delim_whitespace=True)
+    ref_stations_data.columns = ["id", "X", "Y", "Z"]
+
+    #loop over rover stations
+    for i, station in enumerate(rov_stations):
+
+        #index of current reference station
+        ref_idx = ref_stations_data[ref_stations_data['id'] == ref_stations[i]].index.item()
+
+        #coordinates of reference station
+        ref_name = ref_stations_data['id'][ref_idx]
+        ref_X = ref_stations_data['X'][ref_idx]
+        ref_Y = ref_stations_data['Y'][ref_idx]
+        ref_Z = ref_stations_data['Z'][ref_idx]
 
         #current raw file
         raw_data_folder, raw_data_file = raw_file(work_folder, station, 1)
@@ -110,12 +129,11 @@ if __name__ == "__main__":
             myfile.write(file2.read())
 
         #convert RTCM raw binary reference file to RINEX
-        #egyelőre fixen BUTE0
         year, year2, doy, hour, hour2 = date2doy(1)
-        rtcm_folder = ref_data_save + 'BUTE0/'
-        rtcm_file_name = 'BUTE0' + year2 + doy + hour2 + '.rtcm'
+        rtcm_folder = ref_data_save + ref_name + '/'
+        rtcm_file_name = ref_name + year2 + doy + hour2 + '.rtcm'
         if os.path.exists(rtcm_folder + rtcm_file_name):
-            ref_obs_file = 'BUTE0' + year2 + doy + hour2 + ".obs"
+            ref_obs_file = ref_name + year2 + doy + hour2 + ".obs"
             convert_rtcm = "/usr/local/bin/convbin " + rtcm_folder + rtcm_file_name + " -r rtcm3 -v 3.03 -o " + raw_data_folder + ref_obs_file
             os.system(convert_rtcm)
 
@@ -137,10 +155,7 @@ if __name__ == "__main__":
             conf = conf_folder + 'SSSS_sps.conf'
             pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
             os.system(pp)
-            #generate plots
-            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            #os.system(gr)
-            GraphCaller()
+            graph_caller()
 
             #SPP - GPS+GAL
             pos_file = raw_data_file[:-4] + '_spp_G.pos'
@@ -148,10 +163,7 @@ if __name__ == "__main__":
             pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " \
                     + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
             os.system(pp)
-            #generate plots
-            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            #os.system(gr)
-            GraphCaller()
+            graph_caller()
 
             #SBAS - GPS
             sbs_file = raw_data_file[:-3] + 'sbs'
@@ -160,48 +172,39 @@ if __name__ == "__main__":
             pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " + raw_data_folder + sbs_file + " " \
                     + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
             os.system(pp)
-            #generate plots
-            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            #os.system(gr)
-            GraphCaller()
+            graph_caller()
 
             #RTK - GPS
             pos_file = raw_data_file[:-4] + '_rtk.pos'
             conf = conf_folder + 'SSSS_rtk.conf'
             pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + raw_data_folder + obs_file + " " + raw_data_folder + ref_obs_file + " " \
-                    + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
+                    + raw_data_folder + nav_file + " -r " + str(ref_X) + " " + str(ref_Y) + " " + str(ref_Z) + " -o " + raw_data_folder + pos_file
             os.system(pp)
-            #generate plots
-            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            #os.system(gr)
-            GraphCaller()
-            
+            graph_caller()
+
             #RTK - GPS+GAL
             pos_file = raw_data_file[:-4] + '_rtk_G.pos'
             conf = conf_folder + 'SSSS_rtk_gal.conf'
             pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + raw_data_folder + obs_file + " " + raw_data_folder + ref_obs_file + " " \
-                    + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
+                    + raw_data_folder + nav_file + " -r " + str(ref_X) + " " + str(ref_Y) + " " + str(ref_Z) + " -o " + raw_data_folder + pos_file
             os.system(pp)
-            #generate plots
-            #gr = "python3 " + graph + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station
-            #os.system(gr)
-            GraphCaller()
-            
+            graph_caller()
+
             #DGPS - GPS
             pos_file = raw_data_file[:-4] + '_dgps.pos'
             conf = conf_folder + 'SSSS_dgps.conf'
-            pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + raw_data_folder + obs_file + " " + raw_data_folder + ref_obs_file + " " \
-                    + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
+            pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 1 " + raw_data_folder + obs_file + " " + raw_data_folder + ref_obs_file + " " \
+                    + raw_data_folder + nav_file + " -r " + str(ref_X) + " " + str(ref_Y) + " " + str(ref_Z) + " -o " + raw_data_folder + pos_file
             os.system(pp)
-            GraphCaller()
-            
+            graph_caller()
+
             #DGPS - GPS+GAL
             pos_file = raw_data_file[:-4] + '_dgps_G.pos'
             conf = conf_folder + 'SSSS_dgps_gal.conf'
-            pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 2 " + raw_data_folder + obs_file + " " + raw_data_folder + ref_obs_file + " " \
-                    + raw_data_folder + nav_file + " -r 4081882.37127 1410011.14595 4678199.39545" + " -o " + raw_data_folder + pos_file
+            pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 1 " + raw_data_folder + obs_file + " " + raw_data_folder + ref_obs_file + " " \
+                    + raw_data_folder + nav_file + " -r " + str(ref_X) + " " + str(ref_Y) + " " + str(ref_Z) + " -o " + raw_data_folder + pos_file
             os.system(pp)
-            GraphCaller()
+            graph_caller()
 
         #delete raw data folder
-        #shutil.rmtree(raw_data_folder)
+        shutil.rmtree(raw_data_folder)

@@ -58,11 +58,14 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
 
     #solution mode
     if mode == 'kinematic':
-        ymax = 0.2
+        ymax = 0.4
         title = 'RTK'
     elif mode == 'single':
         ymax = 10
         title = 'SPP'
+    elif mode == 'dgps':
+        ymax = 10
+        title = 'DGPS'
     else:
         ymax = 10
 
@@ -124,6 +127,7 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
     #statistical parameters
     nr_of_epochs = data.shape[0]    #number of epochs
     dtmin = min(data['datetime'])   #date and time of the first position
+    nr_of_float = len(data[(data['mode'] == 2)])  # nr of float solutions
 
     #data base connection
     conn = psycopg2.connect("dbname=" + dbase_name)
@@ -142,7 +146,7 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
     cur.execute(sql_create_table)
 
     #insert a new row
-    sql_insert_row = "INSERT INTO rtk_stats(station_id, nr_of_epochs, mode, navi_sys, datetime) VALUES ({}, {}, '{}', '{}', '{}')".format(station, nr_of_epochs, mode, navi_sys, dtmin)
+    sql_insert_row = "INSERT INTO rtk_stats(station_id, nr_of_epochs, mode, navi_sys, datetime, nr_of_float) VALUES ({}, {}, '{}', '{}', '{}', {})".format(station, nr_of_epochs, mode, navi_sys, dtmin, nr_of_float)
     #print(sql_insert_row)
     cur.execute(sql_insert_row)
 
@@ -161,7 +165,7 @@ if __name__ == "__main__":
     #check number of arguments
     if len(sys.argv) != 6:
         print('wrong number of arguments')
-        print('use', sys.argv[0], pos_file_path, pos_file_name, station)
+        print('use', sys.argv[0], 'pos_file_path', 'pos_file_name', 'station')
         exit()
 
     #arguments from command prompt
@@ -174,14 +178,13 @@ if __name__ == "__main__":
 
     #output file
     #tbence átírandó hegyi-re !!!!!
-    #pic_save = Path('/home/tbence/public_html/Position_Error_Graphs/' + pos_file_path[-23:])
-    pic_save = Path('/home/hegyi/public_html/Position_Error_Graphs/Y' + year + '/D' + doy +'/PildoBox' + station )
+    pic_save = Path('/home/tbence/public_html/Position_Error_Graphs/Y' + year + '/D' + doy +'/PildoBox' + station)
     pic_save.mkdir(parents=True, exist_ok=True)
     pic_name = str(pic_save) + '/' + pos_file_name[:-3] + 'png'
     print(pic_name)
 
     #load stations.txt file with true position of stations
-    data_stations = pd.read_csv('/home/tbence/Paripa/stations5.txt',
+    data_stations = pd.read_csv('/home/tbence/Paripa/rov_stations.txt',
                                 header=None, delim_whitespace=True)
     data_stations.columns = ["id", "city", "lat", "long", "elev"]
 
@@ -219,6 +222,5 @@ if __name__ == "__main__":
 
     #write statistical parameters into psql database
     #tbence átírandó hegyi-re !!!!!
-    #dbase_name = "tbence"
-    dbase_name = "hegyi"
+    dbase_name = "tbence"
     dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys)

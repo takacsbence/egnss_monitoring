@@ -1,0 +1,7 @@
+{ "username": "your_username",
+    "pwd" : "your_password",
+    "server": "gpsmet.agt.bme.hu",
+    "port": "2101",
+    "out_dir": "/home/tbence/Paripa/Reference_for_Kinematic/",
+    "mountpoint": "BME10"
+}

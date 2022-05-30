@@ -9,6 +9,8 @@
     call GrpahModule to generate true position error plots
 """
 
+import sys
+import json
 import os
 import zipfile
 from datetime import datetime, timedelta
@@ -89,18 +91,27 @@ def raw_file(work_folder, station, dt):
 
 if __name__ == "__main__":
 
-    #list of stations
-    rov_stations = ['205', '207', '215']
-    ref_stations = ['BUTE0', 'ZZON0', 'BUTE0']
+    #check number of arguments
+    if len(sys.argv) != 2:
+        print('wrong number of arguments')
+        print('use', sys.argv[0], 'json_file')
+        exit()
 
-    #reference station data folder
-    ref_data_save = '/home/tbence/Paripa/Reference_for_Kinematic/'
-    #conf file folder
-    conf_folder = '/home/tbence/Paripa/conf/'
-    #working folder
-    work_folder = '/home/tbence/Paripa/Downloaded_zips/'
-    #GraphModule folder
-    graph_folder = '/home/tbence/Paripa/'
+    #json file name as the first argument from command prompt
+    JNAME = str(sys.argv[1])
+    if not os.path.exists(JNAME):
+        print(JNAME, 'json file does not exist')
+        exit()
+
+    #load json file and get config parameters
+    with open(JNAME) as jfile:
+        JDATA = json.load(jfile)
+        conf_folder = JDATA["conf_folder"]      #folder of RTKLIB config files
+        rov_stations = JDATA["rov_stations"]    #list of rover stations
+        ref_stations = JDATA["ref_stations"]    #list of reference stations
+        ref_data_save = JDATA["ref_data_save"]  #reference station data folder
+        work_folder = JDATA["work_folder"]      #working folder
+        graph_folder = JDATA["graph_folder"]    #GraphModule folder
 
     #load ref_stations.txt file with true position of reference stations
     ref_stations_data = pd.read_csv('/home/tbence/Paripa/ref_stations.txt',
@@ -109,15 +120,7 @@ if __name__ == "__main__":
 
     #loop over rover stations
     for i, station in enumerate(rov_stations):
-
-        #index of current reference station
-        ref_idx = ref_stations_data[ref_stations_data['id'] == ref_stations[i]].index.item()
-
-        #coordinates of reference station
-        ref_name = ref_stations_data['id'][ref_idx]
-        ref_X = ref_stations_data['X'][ref_idx]
-        ref_Y = ref_stations_data['Y'][ref_idx]
-        ref_Z = ref_stations_data['Z'][ref_idx]
+        year, year2, doy, hour, hour2 = date2doy(1)
 
         #current raw file
         raw_data_folder, raw_data_file = raw_file(work_folder, station, 1)
@@ -128,51 +131,67 @@ if __name__ == "__main__":
         with open(raw_data_folder_p + raw_data_file_p, "ab") as myfile, open(raw_data_folder + raw_data_file, "rb") as file2:
             myfile.write(file2.read())
 
-        #convert RTCM raw binary reference file to RINEX
-        year, year2, doy, hour, hour2 = date2doy(1)
-        rtcm_folder = ref_data_save + ref_name + '/'
-        rtcm_file_name = ref_name + year2 + doy + hour2 + '.rtcm'
-        if os.path.exists(rtcm_folder + rtcm_file_name):
-            ref_obs_file = ref_name + year2 + doy + hour2 + ".obs"
-            convert_rtcm = "/usr/local/bin/convbin " + rtcm_folder + rtcm_file_name + " -r rtcm3 -v 3.03 -o " + raw_data_folder + ref_obs_file
-            os.system(convert_rtcm)
-
         #convert septentrio raw binary files to RINEX
-        if os.path.exists(raw_data_folder + raw_data_file):
-            #observation file
-            obs_file = raw_data_file[:-3] + 'obs'
-            convert_to_Rinex = "/usr/local/bin/convbin " + raw_data_folder + raw_data_file + " -v 3.03 -r sbf -d " + raw_data_folder
-            os.system(convert_to_Rinex)
+        if not os.path.exists(raw_data_folder + raw_data_file):
+            print(raw_data_folder + raw_data_file, 'does not exist')
+            exit()
 
-            #navigation file, mixed
-            nav_file = raw_data_file[:-3] + 'nav'
-            convert_to_Rinex = "/opt/Septentrio/RxTools/bin/sbf2rin -f " + raw_data_folder_p + raw_data_file_p + " -R3 -n P -o " + raw_data_folder + nav_file
-            os.system(convert_to_Rinex)
+        #observation file
+        obs_file = raw_data_file[:-3] + 'obs'
+        convert_to_Rinex = "/usr/local/bin/convbin " + raw_data_folder + raw_data_file + " -v 3.03 -r sbf -d " + raw_data_folder
+        os.system(convert_to_Rinex)
+
+        #navigation file, mixed
+        nav_file = raw_data_file[:-3] + 'nav'
+        convert_to_Rinex = "/opt/Septentrio/RxTools/bin/sbf2rin -f " + raw_data_folder_p + raw_data_file_p + " -R3 -n P -o " + raw_data_folder + nav_file
+        os.system(convert_to_Rinex)
+
+        #index of current reference station
+        try:
+            ref_idx = ref_stations_data[ref_stations_data['id'] == ref_stations[i]].index.item()
+
+            #coordinates of reference station
+            ref_name = ref_stations_data['id'][ref_idx]
+            ref_X = ref_stations_data['X'][ref_idx]
+            ref_Y = ref_stations_data['Y'][ref_idx]
+            ref_Z = ref_stations_data['Z'][ref_idx]
+
+            #convert RTCM raw binary reference file to RINEX
+            rtcm_folder = ref_data_save + ref_name + '/'
+            rtcm_file_name = ref_name + year2 + doy + hour2 + '.rtcm'
+            if os.path.exists(rtcm_folder + rtcm_file_name):
+                ref_obs_file = ref_name + year2 + doy + hour2 + ".obs"
+                convert_rtcm = "/usr/local/bin/convbin " + rtcm_folder + rtcm_file_name + " -r rtcm3 -v 3.03 -o " + raw_data_folder + ref_obs_file
+                os.system(convert_rtcm)
+        except IndexError:
+            ref_idx = -1
 
         #post processing
-            #SPP - GPS
-            pos_file = raw_data_file[:-4] + '_spp.pos'
-            conf = conf_folder + 'SSSS_sps.conf'
-            pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
-            os.system(pp)
-            graph_caller()
+        #SPP - GPS
+        pos_file = raw_data_file[:-4] + '_spp.pos'
+        conf = conf_folder + 'SSSS_sps.conf'
+        pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
+        os.system(pp)
+        graph_caller()
 
-            #SPP - GPS+GAL
-            pos_file = raw_data_file[:-4] + '_spp_G.pos'
-            conf = conf_folder + 'SSSS_sps_gal.conf'
-            pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " \
-                    + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
-            os.system(pp)
-            graph_caller()
+        #SPP - GPS+GAL
+        pos_file = raw_data_file[:-4] + '_spp_G.pos'
+        conf = conf_folder + 'SSSS_sps_gal.conf'
+        pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " \
+                + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
+        os.system(pp)
+        graph_caller()
 
-            #SBAS - GPS
-            sbs_file = raw_data_file[:-3] + 'sbs'
-            pos_file = raw_data_file[:-4] + '_sbas.pos'
-            conf = conf_folder + 'SSSS_sbs.conf'
-            pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " + raw_data_folder + sbs_file + " " \
-                    + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
-            os.system(pp)
-            graph_caller()
+        #SBAS - GPS
+        sbs_file = raw_data_file[:-3] + 'sbs'
+        pos_file = raw_data_file[:-4] + '_sbas.pos'
+        conf = conf_folder + 'SSSS_sbs.conf'
+        pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " + raw_data_folder + sbs_file + " " \
+                + raw_data_folder + nav_file + " -o " + raw_data_folder + pos_file
+        os.system(pp)
+        graph_caller()
+
+        if ref_idx > -1:
 
             #RTK - GPS
             pos_file = raw_data_file[:-4] + '_rtk.pos'

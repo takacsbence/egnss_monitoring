@@ -50,7 +50,7 @@ def graph_caller():
     """
         call GraphModule.py to plot true position errors
     """
-    call = "python3 " + graph_folder + "GraphModule.py " + raw_data_folder + " " + pos_file + " " + station + " " + year + " " + doy
+    call = "python3 " + graph_folder + "GraphModule.py" + " " + JNAME + " " + raw_data_folder + " " + pos_file + " " + station + " " + year + " " + doy
     os.system(call)
 
 def raw_file(work_folder, station, dt):

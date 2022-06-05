@@ -2,11 +2,13 @@
 
 """
     generate true position error plot from RTKLIB pos file
-    add statistical parameters into database
+    write statistical parameters into database
 """
 
 from pathlib import Path
 import sys
+import os
+import json
 from math import pi, cos, radians
 import pandas as pd
 from matplotlib.dates import DateFormatter
@@ -48,10 +50,9 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
         :param: plot image file name
     """
 
-    fig, ax = plt.subplots()
-    #fig.set_size_inches(10, 10)    #TB: meghagynám a default méreteket
-
     #plot
+    fig, ax = plt.subplots()
+
     ax.plot(data['datetime'], data['EW_error'], label='East-West')
     ax.plot(data['datetime'], data['SN_error'], label='North-South')
     ax.plot(data['datetime'], data['ELE_error'], label='Up-Down')
@@ -75,6 +76,7 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
     dtmin = min(data['datetime']).round('60min').to_pydatetime()
     dtmax = max(data['datetime']).round('60min').to_pydatetime()
     ax.set_xlim([dtmin, dtmax])
+    ax.yaxis.set_major_locator(plt.MaxNLocator(8))
     ax.set_xlabel('time (hh:mm)')
     ax.set_ylabel('Coordinate errors [meters]')
     ax.set_title('Position Error Graph ' + title + " " + navi_sys)
@@ -85,14 +87,14 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
     ax2 = ax.twinx()
     ax2.plot(data['datetime'], data['nsat'], label='# of satellites', color='red')
     ax2.plot(data['datetime'], data['mode'], label='solution mode', color='purple')
-    ax2.set_ylim([0, 16])
+    ax2.set_ylim([0, 24])
+    ax2.yaxis.set_major_locator(plt.MaxNLocator(8))
     ax2.set_ylabel('# of satellites / solution mode')
     ax2.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.0f'))
     ax2.legend(loc=1)
     ax2.xaxis.set_major_formatter(DateFormatter("%H:%M"))
 
     #add statistical data
-    #TB TODO: feliratok helye
     '''
     ax.text(data['datetime'][600], -0.7, "EW: mean:" + str(round(data['EW_error'].mean(), 3))
         + " min:" + str(round(data['EW_error'].min(), 3))
@@ -163,22 +165,33 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
 if __name__ == "__main__":
 
     #check number of arguments
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 7:
         print('wrong number of arguments')
-        print('use', sys.argv[0], 'pos_file_path', 'pos_file_name', 'station')
+        print('use', sys.argv[0], 'json_file', 'pos_file_path', 'pos_file_name', 'station', 'year', 'doy')
         exit()
 
+    #json file name as the first argument from command prompt
+    JNAME = str(sys.argv[1])
+    if not os.path.exists(JNAME):
+        print(JNAME, 'json file does not exist')
+        exit()
+
+    #load json file and get config parameters
+    with open(JNAME) as jfile:
+        JDATA = json.load(jfile)
+        pic_folder = JDATA["pic_folder"]    #folder to save graph pictures
+        dbase_name = JDATA["dbase_name"]    #psql dbase name
+
     #arguments from command prompt
-    pos_file_path = str(sys.argv[1])
-    pos_file_name = str(sys.argv[2])
-    station = str(sys.argv[3])
-    year = str(sys.argv[4])
-    doy = str(sys.argv[5])
+    pos_file_path = str(sys.argv[2])
+    pos_file_name = str(sys.argv[3])
+    station = str(sys.argv[4])
+    year = str(sys.argv[5])
+    doy = str(sys.argv[6])
     pos_file = pos_file_path + pos_file_name
 
     #output file
-    #tbence átírandó hegyi-re !!!!!
-    pic_save = Path('/home/tbence/public_html/Position_Error_Graphs/Y' + year + '/D' + doy +'/PildoBox' + station)
+    pic_save = Path(pic_folder + '/Y' + year + '/D' + doy +'/PildoBox' + station)
     pic_save.mkdir(parents=True, exist_ok=True)
     pic_name = str(pic_save) + '/' + pos_file_name[:-3] + 'png'
     print(pic_name)
@@ -221,6 +234,4 @@ if __name__ == "__main__":
     plot_gen(data_gps, mode, navi_sys, station, pic_name)
 
     #write statistical parameters into psql database
-    #tbence átírandó hegyi-re !!!!!
-    dbase_name = "tbence"
     dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys)

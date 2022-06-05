@@ -3,5 +3,7 @@
   "ref_stations": ["BUTE0", "ZZON0"],
   "ref_data_save": "/home/tbence/Paripa/Reference_for_Kinematic/",
   "work_folder": "/home/tbence/Paripa/Downloaded_zips/",
-  "graph_folder": "/home/tbence/Paripa/"
+  "graph_folder": "/home/tbence/Paripa/",
+  "pic_folder": "/home/tbence/public_html/Position_Error_Graphs",
+  "dbase_name": "tbence"
 }

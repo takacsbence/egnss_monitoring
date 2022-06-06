@@ -5,10 +5,11 @@
     write statistical parameters into database
 """
 
-from pathlib import Path
 import sys
 import os
 import json
+import warnings
+from pathlib import Path
 from math import pi, cos, radians
 import pandas as pd
 from matplotlib.dates import DateFormatter
@@ -126,10 +127,19 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
                 navigation sytems
     """
 
-    #statistical parameters
-    nr_of_epochs = data.shape[0]    #number of epochs
-    dtmin = min(data['datetime'])   #date and time of the first position
-    nr_of_float = len(data[(data['mode'] == 2)])  # nr of float solutions
+    #create list of dictionaries of the statistical parameters
+    #just add new elements to the list and all the others are done automatically
+    data_to_dbase = [
+        {'col': 'station_ID', 'type': 'INT', 'value': station},                         #station ide
+        {'col': 'datetime', 'type': 'TIMESTAMP', 'value': min(data['datetime'])},       #date and time of the first position
+        {'col': 'nr_of_epochs', 'type': 'INT', 'value': data.shape[0]},                 #number of epochs
+        {'col': 'mode', 'type': 'VARCHAR', 'value': mode},                              #solution mode
+        {'col': 'navi_sys', 'type': 'VARCHAR', 'value': navi_sys},                      #used navigation systems
+        {'col': 'nr_of_float', 'type': 'INT', 'value': len(data[(data['mode'] == 2)])}, #number of float positions
+        {'col': 'mean_EW', 'type': 'FLOAT', 'value': data['EW_error'].mean()},          #mean of East-West positions
+        {'col': 'mean_SN', 'type': 'FLOAT', 'value': data['SN_error'].mean()},          #mean of East-West positions
+        {'col': 'mean_EL', 'type': 'FLOAT', 'value': data['ELE_error'].mean()}          #mean of East-West positions
+    ]
 
     #data base connection
     conn = psycopg2.connect("dbname=" + dbase_name)
@@ -138,24 +148,18 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
     cur = conn.cursor()
 
     #create table
-    sql_create_table = "CREATE TABLE IF NOT EXISTS rtk_stats ( \
-        id SERIAL PRIMARY KEY, \
-        station_ID INT, \
-        datetime TIMESTAMP, \
-        nr_of_epochs INT, \
-        mode VARCHAR, \
-        navi_sys VARCHAR);"
+    sql_create_table = "CREATE TABLE IF NOT EXISTS rtk_stats (id SERIAL PRIMARY KEY);"
     cur.execute(sql_create_table)
 
-    #insert a new row
-    sql_insert_row = "INSERT INTO rtk_stats(station_id, nr_of_epochs, mode, navi_sys, datetime, nr_of_float) VALUES ({}, {}, '{}', '{}', '{}', {})".format(station, nr_of_epochs, mode, navi_sys, dtmin, nr_of_float)
-    #print(sql_insert_row)
-    cur.execute(sql_insert_row)
+    #add columns
+    sql_add_cols = "ALTER TABLE rtk_stats " + ", ".join(['ADD COLUMN IF NOT EXISTS {} {}'.format(d['col'], d['type']) for d in data_to_dbase])
+    cur.execute(sql_add_cols)
 
-    #querry all data, just for testing
-    #cur.execute('SELECT * from rtk_stats')
-    #s = cur.fetchall()
-    #print(s)
+    #insert a new row
+    cols = ", ".join(['{}'.format(d['col']) for d in data_to_dbase])
+    val_cols = ", ".join(["'{}'".format(d['value']) for d in data_to_dbase])
+    sql = "INSERT INTO rtk_stats(" + cols + ") VALUES(" + val_cols + ");"
+    cur.execute(sql)
 
     # close the communication with the PostgreSQL
     conn.commit()
@@ -163,6 +167,7 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
     conn.close()
 
 if __name__ == "__main__":
+    warnings.filterwarnings("ignore")
 
     #check number of arguments
     if len(sys.argv) != 7:
@@ -194,7 +199,6 @@ if __name__ == "__main__":
     pic_save = Path(pic_folder + '/Y' + year + '/D' + doy +'/PildoBox' + station)
     pic_save.mkdir(parents=True, exist_ok=True)
     pic_name = str(pic_save) + '/' + pos_file_name[:-3] + 'png'
-    print(pic_name)
 
     #load stations.txt file with true position of stations
     data_stations = pd.read_csv('/home/tbence/Paripa/rov_stations.txt',

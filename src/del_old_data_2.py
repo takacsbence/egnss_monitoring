@@ -7,6 +7,7 @@
 import os
 import time
 from pathlib import Path
+import shutil
 
 def del_files(path, days):
     """
@@ -18,6 +19,7 @@ def del_files(path, days):
         if os.stat(f).st_mtime < now - days * 86400:
             if os.path.isfile(f):
                 os.remove(f)
+            shutil.rmtree(f)
 
 if __name__ == "__main__":
     now = time.time()

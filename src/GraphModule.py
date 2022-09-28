@@ -126,9 +126,10 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
                 positioning mode
                 navigation sytems
     """
-
+    #min,max,std, .95
     #create list of dictionaries of the statistical parameters
     #just add new elements to the list and all the others are done automatically
+    #print(data['EW_error'].max())
     data_to_dbase = [
         {'col': 'station_ID', 'type': 'INT', 'value': station},                         #station ide
         {'col': 'datetime', 'type': 'TIMESTAMP', 'value': min(data['datetime'])},       #date and time of the first position
@@ -137,8 +138,22 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
         {'col': 'navi_sys', 'type': 'VARCHAR', 'value': navi_sys},                      #used navigation systems
         {'col': 'nr_of_float', 'type': 'INT', 'value': len(data[(data['mode'] == 2)])}, #number of float positions
         {'col': 'mean_EW', 'type': 'FLOAT', 'value': data['EW_error'].mean()},          #mean of East-West positions
-        {'col': 'mean_SN', 'type': 'FLOAT', 'value': data['SN_error'].mean()},          #mean of East-West positions
-        {'col': 'mean_EL', 'type': 'FLOAT', 'value': data['ELE_error'].mean()}          #mean of East-West positions
+        {'col': 'mean_SN', 'type': 'FLOAT', 'value': data['SN_error'].mean()},       
+        {'col': 'mean_EL', 'type': 'FLOAT', 'value': data['ELE_error'].mean()},        
+        {'col': 'max_EL', 'type': 'FLOAT', 'value': data['ELE_error'].max()},
+        {'col': 'max_EW', 'type': 'FLOAT', 'value': data['EW_error'].max()},
+        {'col': 'max_SN', 'type': 'FLOAT', 'value': data['SN_error'].max()},
+        {'col': 'min_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].min()},
+        {'col': 'min_EW', 'type': 'FLOAT', 'value': data['EW_error'].min()},
+        {'col': 'min_SN', 'type': 'FLOAT', 'value': data['SN_error'].min()},
+        {'col': 'std_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].std()},
+        {'col': 'std_EW', 'type': 'FLOAT', 'value': data['EW_error'].std()},
+        {'col': 'std_SN', 'type': 'FLOAT', 'value': data['SN_error'].std()},
+        {'col': 'q95_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].quantile(.95)},
+        {'col': 'q95_EW', 'type': 'FLOAT', 'value': data['EW_error'].quantile(.95)},
+        {'col': 'q95_SN', 'type': 'FLOAT', 'value': data['SN_error'].quantile(.95)}
+        
+        
     ]
 
     #data base connection
@@ -154,6 +169,8 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
     #add columns
     sql_add_cols = "ALTER TABLE rtk_stats " + ", ".join(['ADD COLUMN IF NOT EXISTS {} {}'.format(d['col'], d['type']) for d in data_to_dbase])
     cur.execute(sql_add_cols)
+    
+    
 
     #insert a new row
     cols = ", ".join(['{}'.format(d['col']) for d in data_to_dbase])

@@ -112,6 +112,7 @@ if __name__ == "__main__":
         ref_data_save = JDATA["ref_data_save"]  #reference station data folder
         work_folder = JDATA["work_folder"]      #working folder
         graph_folder = JDATA["graph_folder"]    #GraphModule folder
+        log_file = JDATA["log"]
 
     #load ref_stations.txt file with true position of reference stations
     ref_stations_data = pd.read_csv('/home/tbence/Paripa/ref_stations.txt',
@@ -128,13 +129,18 @@ if __name__ == "__main__":
         raw_data_folder_p, raw_data_file_p = raw_file(work_folder, station, 2)
 
         #concat these two files
-        with open(raw_data_folder_p + raw_data_file_p, "ab") as myfile, open(raw_data_folder + raw_data_file, "rb") as file2:
-            myfile.write(file2.read())
+        if os.path.exists(raw_data_folder_p + raw_data_file_p):
+            with open(raw_data_folder_p + raw_data_file_p, "ab") as myfile, open(raw_data_folder + raw_data_file, "rb") as file2:
+                myfile.write(file2.read())
+                
 
         #convert septentrio raw binary files to RINEX
         if not os.path.exists(raw_data_folder + raw_data_file):
-            print(raw_data_folder + raw_data_file, 'does not exist')
-            exit()
+            file = open(log_file,'a')
+            file.write(datetime.now()+'/n' + raw_data_folder + raw_data_file + 'does not exist')
+            #print(raw_data_folder + raw_data_file, 'does not exist')
+            file.close()
+            continue
 
         #observation file
         obs_file = raw_data_file[:-3] + 'obs'

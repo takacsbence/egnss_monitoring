@@ -51,13 +51,13 @@ def dbase(station_id, last_hour_date_time, file_size):
     cur = conn.cursor()
 
     #create table
-    sql_create_table = "CREATE TABLE IF NOT EXISTS paripa_files (id SERIAL PRIMARY KEY, station_id VARCHAR, file_size INT, datetime TIMESTAMP, unique(station_id, datetime));"
+    sql_create_table = "CREATE TABLE IF NOT EXISTS paripa_files2 (id SERIAL PRIMARY KEY, station_id INT, file_size INT, datetime TIMESTAMP, unique(station_id, datetime));"
     cur.execute(sql_create_table)
 
     #insert a new row
     val_cols = ", ".join(["'{}'".format(station_id), "'{}'".format(last_hour_date_time), "'{}'".format(file_size)])
 
-    sql = "INSERT INTO paripa_files(station_id, datetime, file_size) VALUES(" + val_cols + ");"
+    sql = "INSERT INTO paripa_files2(station_id, datetime, file_size) VALUES(" + val_cols + ");"
     #print(sql)
     cur.execute(sql)
 
@@ -97,7 +97,7 @@ def raw_file(work_folder, station, dt):
     dbase(station_id, last_hour_date_time, file_size)
     print(station_id, last_hour_date_time, file_size, zipped_raw_data_file)
 
-def ref_file(folder, station, dt):
+def ref_file(folder, station_name, station_id, dt):
     """
         :param:     folder where rtcm data of reference stations are stored
                     station id, like BUTE
@@ -109,10 +109,10 @@ def ref_file(folder, station, dt):
     year, year2, doy, hour, hour2, last_hour_date_time = date2doy(dt)
 
     #raw data folder
-    rtcm_folder = folder + station + '/'
+    rtcm_folder = folder + station_name + '/'
 
     #raw file name
-    rtcm_file_name = station + year2 + doy + hour2 + '.rtcm'
+    rtcm_file_name = station_name + year2 + doy + hour2 + '.rtcm'
 
     #concat path and filename
     rtcm_data_file = rtcm_folder + rtcm_file_name
@@ -123,19 +123,21 @@ def ref_file(folder, station, dt):
     else:
         file_size = 0
 
-    dbase(station, last_hour_date_time, file_size)
-    print(station, last_hour_date_time, file_size, rtcm_data_file)
+    dbase(station_id, last_hour_date_time, file_size)
+    print(station_id, station_name, last_hour_date_time, file_size, rtcm_data_file)
 
 if __name__ == "__main__":
 
     hc_data_folder = "/home/tbence/HC/data/"
     rtcm_folder = "/home/tbence/Paripa/Reference_for_Kinematic/"
-    dt = 4
+    dt = 1
 
     #HC stations
-    for station_id in range(205, 216):
-        raw_file(hc_data_folder, str(station_id), dt)
+    #for station_id in range(205, 216):
+        #raw_file(hc_data_folder, str(station_id), dt)
 
     #Reference stations
-    for station_id in ['BUTE0', 'BME10', 'ZZON0']:
-        ref_file(rtcm_folder, station_id, dt)
+    station_name = ['BUTE0', 'BME10', 'ZZON0']
+    station_id = [101, 102, 103]
+    for i in range(3):
+        ref_file(rtcm_folder, station_name[i], station_id[i], dt)

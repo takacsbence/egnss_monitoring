@@ -41,7 +41,6 @@ def header_lines(posfile):
             break
     return ct, mode, navi_sys
 
-
 def plot_gen(data, mode, navi_sys, station, pic_name):
     """ generate true position error plots
         :param: pandas dataframe with data
@@ -49,6 +48,7 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
         :param: navigation system, like GPS or GPS GALILEO
         :param: station id, like 205
         :param: plot image file name
+        :returns: mode_i (SPP:5, DGPS:4, SBAS:3, RTK fix:1)
     """
 
     #plot
@@ -62,12 +62,17 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
     if mode == 'kinematic':
         ymax = 0.4
         title = 'RTK'
+        mode_i = 1      #fix solutions
     elif mode == 'single':
         ymax = 10
         title = 'SPP'
+        mode_i = 5      #SPP solutions
+        if navi_sys == 'GPS SBAS':
+            mode_i = 3  #SBAS solutions
     elif mode == 'dgps':
         ymax = 10
         title = 'DGPS'
+        mode_i = 4      #DGPS solutions
     else:
         ymax = 10
 
@@ -95,22 +100,6 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
     ax2.legend(loc=1)
     ax2.xaxis.set_major_formatter(DateFormatter("%H:%M"))
 
-    #add statistical data
-    '''
-    ax.text(data['datetime'][600], -0.7, "EW: mean:" + str(round(data['EW_error'].mean(), 3))
-        + " min:" + str(round(data['EW_error'].min(), 3))
-        + " max:" + str(round(data['EW_error'].max(), 3))
-        + " stdev: " + str(round(data['EW_error'].std(), 3)), fontsize=10)
-    ax.text(data_gps['datetime'][600], -0.8, "NS: mean:" + str(round(data['SN_error'].mean(), 3))
-        + " min:" + str(round(data['SN_error'].min(), 3))
-        + " max:" + str(round(data['SN_error'].max(), 3))
-        + " stdev: "+ str(round(data['SN_error'].std(),3)), fontsize=10)
-    ax.text(data_gps['datetime'][600], -0.9, "Ele: mean:" + str(round(data['ELE_error'].mean(), 3))
-        + " min:" + str(round(data['ELE_error'].min(), 3))
-        + " max:" + str(round(data['ELE_error'].max(), 3))
-        + " stdev: " + str(round(data['ELE_error'].std(),3)), fontsize=10)
-    '''
-
     #add date and station name to plot
     plt.figtext(0.1, 0.02, dtmin.strftime("%Y-%m-%d"))
     plt.figtext(0.8, 0.02, station)
@@ -118,7 +107,9 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
     #save plot as an image
     plt.savefig(pic_name, dpi=100)
 
-def dbase_write(dbase_name, data, station, mode, navi_sys):
+    return mode_i
+
+def dbase_write(dbase_name, data, station, mode, navi_sys, mode_i):
     """ write statistical parameters into psql database
         :param: psql data base name
                 pandas dataframe with data
@@ -137,24 +128,25 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
         {'col': 'mode', 'type': 'VARCHAR', 'value': mode},                              #solution mode
         {'col': 'navi_sys', 'type': 'VARCHAR', 'value': navi_sys},                      #used navigation systems
         {'col': 'nr_of_float', 'type': 'INT', 'value': len(data[(data['mode'] == 2)])}, #number of float positions
-        {'col': 'mean_EW', 'type': 'FLOAT', 'value': data['EW_error'].mean()},          #mean of East-West positions
-        {'col': 'mean_SN', 'type': 'FLOAT', 'value': data['SN_error'].mean()},       
-        {'col': 'mean_EL', 'type': 'FLOAT', 'value': data['ELE_error'].mean()},        
-        {'col': 'max_EL', 'type': 'FLOAT', 'value': data['ELE_error'].max()},
-        {'col': 'max_EW', 'type': 'FLOAT', 'value': data['EW_error'].max()},
-        {'col': 'max_SN', 'type': 'FLOAT', 'value': data['SN_error'].max()},
-        {'col': 'min_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].min()},
-        {'col': 'min_EW', 'type': 'FLOAT', 'value': data['EW_error'].min()},
-        {'col': 'min_SN', 'type': 'FLOAT', 'value': data['SN_error'].min()},
-        {'col': 'std_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].std()},
-        {'col': 'std_EW', 'type': 'FLOAT', 'value': data['EW_error'].std()},
-        {'col': 'std_SN', 'type': 'FLOAT', 'value': data['SN_error'].std()},
-        {'col': 'q95_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].quantile(.95)},
-        {'col': 'q95_EW', 'type': 'FLOAT', 'value': data['EW_error'].quantile(.95)},
-        {'col': 'q95_SN', 'type': 'FLOAT', 'value': data['SN_error'].quantile(.95)}
-        
-        
+        {'col': 'mean_EW', 'type': 'FLOAT', 'value': data['EW_error'].where(data['mode'] == mode_i).mean()},          #mean of East-West positions
+        {'col': 'mean_SN', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).mean()},
+        {'col': 'mean_EL', 'type': 'FLOAT', 'value': data['ELE_error'].where(data['mode'] == mode_i).mean()},
+        {'col': 'max_EL', 'type': 'FLOAT', 'value': data['ELE_error'].where(data['mode'] == mode_i).max()},
+        {'col': 'max_EW', 'type': 'FLOAT', 'value': data['EW_error'].where(data['mode'] == mode_i).max()},
+        {'col': 'max_SN', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).max()},
+        {'col': 'min_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].where(data['mode'] == mode_i).min()},
+        {'col': 'min_EW', 'type': 'FLOAT', 'value': data['EW_error'].where(data['mode'] == mode_i).min()},
+        {'col': 'min_SN', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).min()},
+        {'col': 'std_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].where(data['mode'] == mode_i).std()},
+        {'col': 'std_EW', 'type': 'FLOAT', 'value': data['EW_error'].where(data['mode'] == mode_i).std()},
+        {'col': 'std_SN', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).std()},
+        {'col': 'q95_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].where(data['mode'] == mode_i).quantile(.95)},
+        {'col': 'q95_EW', 'type': 'FLOAT', 'value': data['EW_error'].where(data['mode'] == mode_i).quantile(.95)},
+        {'col': 'q95_SN', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).quantile(.95)}
     ]
+    #for testing mode filter
+    #print('no mode filer', data['ELE_error'].mean())
+    #print('with mode filter', data['ELE_error'].where(data['mode'] == mode_i).mean())
 
     #data base connection
     conn = psycopg2.connect("dbname=" + dbase_name)
@@ -169,8 +161,6 @@ def dbase_write(dbase_name, data, station, mode, navi_sys):
     #add columns
     sql_add_cols = "ALTER TABLE rtk_stats " + ", ".join(['ADD COLUMN IF NOT EXISTS {} {}'.format(d['col'], d['type']) for d in data_to_dbase])
     cur.execute(sql_add_cols)
-    
-    
 
     #insert a new row
     cols = ", ".join(['{}'.format(d['col']) for d in data_to_dbase])
@@ -252,7 +242,7 @@ if __name__ == "__main__":
     data_gps['ELE_error'] = data_gps['ele'] - ref_ele
 
     #generate plots
-    plot_gen(data_gps, mode, navi_sys, station, pic_name)
+    mode_i = plot_gen(data_gps, mode, navi_sys, station, pic_name)
 
     #write statistical parameters into psql database
-    dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys)
+    dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys, mode_i)

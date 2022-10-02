@@ -114,6 +114,10 @@ if __name__ == "__main__":
         graph_folder = JDATA["graph_folder"]    #GraphModule folder
         log_file = JDATA["log"]
 
+    #open log file
+    #TODO : check if log_file does not exists
+    log_file = open(log_file, 'a')
+
     #load ref_stations.txt file with true position of reference stations
     ref_stations_data = pd.read_csv('/home/tbence/Paripa/ref_stations.txt',
                                     header=None, delim_whitespace=True)
@@ -132,14 +136,12 @@ if __name__ == "__main__":
         if os.path.exists(raw_data_folder_p + raw_data_file_p):
             with open(raw_data_folder_p + raw_data_file_p, "ab") as myfile, open(raw_data_folder + raw_data_file, "rb") as file2:
                 myfile.write(file2.read())
-                
 
         #convert septentrio raw binary files to RINEX
         if not os.path.exists(raw_data_folder + raw_data_file):
-            file = open(log_file,'a')
-            file.write(datetime.now()+'/n' + raw_data_folder + raw_data_file + 'does not exist')
+            log_file.write(datetime.now()+'/n' + raw_data_folder + raw_data_file + 'does not exist')
             #print(raw_data_folder + raw_data_file, 'does not exist')
-            file.close()
+            log_file.close()
             continue
 
         #observation file
@@ -150,6 +152,11 @@ if __name__ == "__main__":
         #navigation file, mixed
         nav_file = raw_data_file[:-3] + 'nav'
         convert_to_Rinex = "/opt/Septentrio/RxTools/bin/sbf2rin -f " + raw_data_folder_p + raw_data_file_p + " -R3 -n P -o " + raw_data_folder + nav_file
+        os.system(convert_to_Rinex)
+
+        #sbas messages
+        sbs_file = raw_data_file[:-3] + 'sbs'
+        convert_to_Rinex = "/usr/local/bin/convbin " + raw_data_folder_p + raw_data_file_p + " -v 3.03 -r sbf -s " + raw_data_folder + sbs_file
         os.system(convert_to_Rinex)
 
         #index of current reference station
@@ -189,7 +196,6 @@ if __name__ == "__main__":
         graph_caller()
 
         #SBAS - GPS
-        sbs_file = raw_data_file[:-3] + 'sbs'
         pos_file = raw_data_file[:-4] + '_sbas.pos'
         conf = conf_folder + 'SSSS_sbs.conf'
         pp = "/usr/local/bin/rnx2rtkp -k " + conf + " -p 0 " + raw_data_folder + obs_file + " " + raw_data_folder + sbs_file + " " \

@@ -1,0 +1,10 @@
+{ "conf_folder": "/home/tbence/Paripa/conf/",
+  "rov_stations": ["205"],
+  "ref_stations": [],
+  "ref_data_save": "/home/tbence/Paripa/Reference_for_Kinematic/",
+  "work_folder": "/home/tbence/Paripa/Downloaded_zips/",
+  "graph_folder": "/home/tbence/Paripa/",
+  "pic_folder": "/home/tbence/public_html/Position_Error_Graphs",
+  "dbase_name": "tbence",
+  "log": "/home/tbence/Paripa/paripa_log.txt"
+}

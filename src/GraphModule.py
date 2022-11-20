@@ -142,7 +142,10 @@ def dbase_write(dbase_name, data, station, mode, navi_sys, mode_i):
         {'col': 'std_SN', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).std()},
         {'col': 'q95_ELE', 'type': 'FLOAT', 'value': data['ELE_error'].where(data['mode'] == mode_i).quantile(.95)},
         {'col': 'q95_EW', 'type': 'FLOAT', 'value': data['EW_error'].where(data['mode'] == mode_i).quantile(.95)},
-        {'col': 'q95_SN', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).quantile(.95)}
+        {'col': 'q95_SN', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).quantile(.95)},
+        {'col': 'q95_ELE_abs', 'type': 'FLOAT', 'value': data['ELE_error'].where(data['mode'] == mode_i).abs().quantile(.95)},
+        {'col': 'q95_EW_abs', 'type': 'FLOAT', 'value': data['EW_error'].where(data['mode'] == mode_i).abs().quantile(.95)},
+        {'col': 'q95_SN_abs', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).abs().quantile(.95)}
     ]
     #for testing mode filter
     #print('no mode filer', data['ELE_error'].mean())

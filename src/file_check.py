@@ -57,7 +57,7 @@ def dbase(station_id, last_hour_date_time, file_size):
     #insert a new row
     val_cols = ", ".join(["'{}'".format(station_id), "'{}'".format(last_hour_date_time), "'{}'".format(file_size)])
 
-    sql = "INSERT INTO paripa_files2(station_id, datetime, file_size) VALUES(" + val_cols + ");"
+    sql = "INSERT INTO paripa_files2(station_id, datetime, file_size) VALUES(" + val_cols + ") ON CONFLICT (station_id, datetime) DO UPDATE SET file_size = " + "'{}'".format(file_size) + ";"
     #print(sql)
     cur.execute(sql)
 
@@ -95,7 +95,7 @@ def raw_file(work_folder, station, dt):
         file_size = 0
 
     dbase(station_id, last_hour_date_time, file_size)
-    print(station_id, last_hour_date_time, file_size, zipped_raw_data_file)
+    #print(station_id, last_hour_date_time, file_size, zipped_raw_data_file)
 
 def ref_file(folder, station_name, station_id, dt):
     """
@@ -124,7 +124,7 @@ def ref_file(folder, station_name, station_id, dt):
         file_size = 0
 
     dbase(station_id, last_hour_date_time, file_size)
-    print(station_id, station_name, last_hour_date_time, file_size, rtcm_data_file)
+    #print(station_id, station_name, last_hour_date_time, file_size, rtcm_data_file)
 
 if __name__ == "__main__":
 
@@ -133,11 +133,11 @@ if __name__ == "__main__":
     dt = 1
 
     #HC stations
-    #for station_id in range(205, 216):
-        #raw_file(hc_data_folder, str(station_id), dt)
+    for station_id in range(205, 216):
+        raw_file(hc_data_folder, str(station_id), dt)
 
     #Reference stations
-    station_name = ['BUTE0', 'BME10', 'ZZON0']
-    station_id = [101, 102, 103]
-    for i in range(3):
+    station_name = ['BUTE0', 'BME10', 'ZZON0', 'GYOR0', 'SARM0']
+    station_id = [101, 102, 103, 104, 105]
+    for i in range(5):
         ref_file(rtcm_folder, station_name[i], station_id[i], dt)

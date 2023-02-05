@@ -3,5 +3,7 @@
     "server": "gpsmet.agt.bme.hu",
     "port": "2101",
     "out_dir": "/home/tbence/Paripa/Reference_for_Kinematic/",
-    "mountpoint": "BME10"
+    "mountpoint": "BME10",
+    "rec_pos": "46.69664515 17.16008601 175.663",
+    "ref_sta_name": "SARM1"
 }

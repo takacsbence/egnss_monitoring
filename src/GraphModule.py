@@ -41,12 +41,13 @@ def header_lines(posfile):
             break
     return ct, mode, navi_sys
 
-def plot_gen(data, mode, navi_sys, station, pic_name):
+def plot_gen(data, mode, navi_sys, station, ref, pic_name):
     """ generate true position error plots
         :param: pandas dataframe with data
         :param: solutuion mode, like single or kinematic
         :param: navigation system, like GPS or GPS GALILEO
         :param: station id, like 205
+        :param: reference station name
         :param: plot image file name
         :returns: mode_i (SPP:5, DGPS:4, SBAS:3, RTK fix:1)
     """
@@ -102,14 +103,14 @@ def plot_gen(data, mode, navi_sys, station, pic_name):
 
     #add date and station name to plot
     plt.figtext(0.1, 0.02, dtmin.strftime("%Y-%m-%d"))
-    plt.figtext(0.8, 0.02, station)
+    plt.figtext(0.7, 0.02, ref + "-" + station)
 
     #save plot as an image
     plt.savefig(pic_name, dpi=100)
 
     return mode_i
 
-def dbase_write(dbase_name, data, station, mode, navi_sys, mode_i):
+def dbase_write(dbase_name, data, station, mode, navi_sys, mode_i, ref):
     """ write statistical parameters into psql database
         :param: psql data base name
                 pandas dataframe with data
@@ -117,12 +118,11 @@ def dbase_write(dbase_name, data, station, mode, navi_sys, mode_i):
                 positioning mode
                 navigation sytems
     """
-    #min,max,std, .95
     #create list of dictionaries of the statistical parameters
     #just add new elements to the list and all the others are done automatically
-    #print(data['EW_error'].max())
     data_to_dbase = [
-        {'col': 'station_ID', 'type': 'INT', 'value': station},                         #station ide
+        {'col': 'station_ID', 'type': 'INT', 'value': station},                         #station id
+        {'col': 'ref_name', 'type': 'VARCHAR', 'value': ref},                           #reference station name
         {'col': 'datetime', 'type': 'TIMESTAMP', 'value': min(data['datetime'])},       #date and time of the first position
         {'col': 'nr_of_epochs', 'type': 'INT', 'value': data.shape[0]},                 #number of epochs
         {'col': 'mode', 'type': 'VARCHAR', 'value': mode},                              #solution mode
@@ -146,6 +146,7 @@ def dbase_write(dbase_name, data, station, mode, navi_sys, mode_i):
         {'col': 'q95_ELE_abs', 'type': 'FLOAT', 'value': data['ELE_error'].where(data['mode'] == mode_i).abs().quantile(.95)},
         {'col': 'q95_EW_abs', 'type': 'FLOAT', 'value': data['EW_error'].where(data['mode'] == mode_i).abs().quantile(.95)},
         {'col': 'q95_SN_abs', 'type': 'FLOAT', 'value': data['SN_error'].where(data['mode'] == mode_i).abs().quantile(.95)}
+
     ]
     #for testing mode filter
     #print('no mode filer', data['ELE_error'].mean())
@@ -170,6 +171,7 @@ def dbase_write(dbase_name, data, station, mode, navi_sys, mode_i):
     val_cols = ", ".join(["'{}'".format(d['value']) for d in data_to_dbase])
     sql = "INSERT INTO rtk_stats(" + cols + ") VALUES(" + val_cols + ");"
     cur.execute(sql)
+    #print(sql)
 
     # close the communication with the PostgreSQL
     conn.commit()
@@ -180,9 +182,9 @@ if __name__ == "__main__":
     warnings.filterwarnings("ignore")
 
     #check number of arguments
-    if len(sys.argv) != 7:
+    if len(sys.argv) < 7:
         print('wrong number of arguments')
-        print('use', sys.argv[0], 'json_file', 'pos_file_path', 'pos_file_name', 'station', 'year', 'doy')
+        print('use', sys.argv[0], 'json_file', 'pos_file_path', 'pos_file_name', 'station', 'year', 'doy', 'ref')
         exit()
 
     #json file name as the first argument from command prompt
@@ -203,6 +205,11 @@ if __name__ == "__main__":
     station = str(sys.argv[4])
     year = str(sys.argv[5])
     doy = str(sys.argv[6])
+    if len(sys.argv) == 8:
+        ref = str(sys.argv[7])
+    else:
+        ref = 0
+    print(ref)
     pos_file = pos_file_path + pos_file_name
 
     #output file
@@ -245,7 +252,8 @@ if __name__ == "__main__":
     data_gps['ELE_error'] = data_gps['ele'] - ref_ele
 
     #generate plots
-    mode_i = plot_gen(data_gps, mode, navi_sys, station, pic_name)
+    mode_i = plot_gen(data_gps, mode, navi_sys, station, ref, pic_name)
 
     #write statistical parameters into psql database
-    dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys, mode_i)
+    dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys, mode_i, ref)
+

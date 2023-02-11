@@ -25,7 +25,7 @@ if __name__ == "__main__":
         PORT = JDATA["port"]
         OUT_DIR = JDATA["out_dir"]
         MOUNTPOINT = JDATA["mountpoint"]
-        REC_POS = JDATA["rec_pos"]
+        REC_POS = JDATA.get("rec_pos")
         REF_STA_NAME = JDATA["ref_sta_name"]
 
     #folder of output file
@@ -35,8 +35,13 @@ if __name__ == "__main__":
 
     #use rtklib str2str to get data in RTCM as an ntrip client
     try:
-        if not REC_POS:
+        if REC_POS:
             LAT, LON, ELE = REC_POS.split()
+            cmd = ["str2str", "-in", "ntrip://" + USERNAME + ":" + PWD + "@" +
+                            SERVER + ":" + PORT + "/" + MOUNTPOINT, "-p", LAT, LON, ELE,
+                            "-n", "1000",
+                            "-out", FOLDER + REF_STA_NAME + '%y%n%h' + EXT + '::S=1']
+            #print(cmd)
             subprocess.run(["str2str", "-in", "ntrip://" + USERNAME + ":" + PWD + "@" +
                             SERVER + ":" + PORT + "/" + MOUNTPOINT, "-p", LAT, LON, ELE,
                             "-n", "1000",
@@ -44,7 +49,7 @@ if __name__ == "__main__":
         else:
             subprocess.run(["str2str", "-in", "ntrip://" + USERNAME + ":" + PWD + "@" +
                             SERVER + ":" + PORT + "/" + MOUNTPOINT,
-                            "-out", FOLDER + MOUNTPOINT + '%y%n%h' + EXT + '::S=1'])
+                            "-out", FOLDER + REF_STA_NAME + '%y%n%h' + EXT + '::S=1'])
 
     except subprocess.TimeoutExpired:
         print("TimeOutError")

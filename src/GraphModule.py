@@ -33,7 +33,7 @@ def header_lines(posfile):
     for line in lines:
         ct += 1
         if line.find('% pos mode') == 0:
-            mode = line.split()[4]
+            mode = line.split()[4].lower()
         if line.find('% navi sys') == 0:
             navi_sys = ' '.join(line.split()[4:]).upper()
         if line.find('%') == -1:

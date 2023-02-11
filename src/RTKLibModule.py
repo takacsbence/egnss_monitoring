@@ -169,9 +169,9 @@ if __name__ == "__main__":
 
             #coordinates of reference station
             ref_name = ref_stations_data['id'][ref_idx]
-            ref_X = ref_stations_data['X'][ref_idx]
-            ref_Y = ref_stations_data['Y'][ref_idx]
-            ref_Z = ref_stations_data['Z'][ref_idx]
+            #ref_X = ref_stations_data['X'][ref_idx]
+            #ref_Y = ref_stations_data['Y'][ref_idx]
+            #ref_Z = ref_stations_data['Z'][ref_idx]
 
             #convert RTCM raw binary reference file to RINEX
             rtcm_folder = ref_data_save + ref_name + '/'
@@ -225,7 +225,9 @@ if __name__ == "__main__":
         #SBAS - GPS
         pos_file = raw_data_file[:-4] + '_sbas.pos'
         conf = conf_folder + 'SSSS_sbs.conf'
-        subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "0", raw_data_folder + obs_file, raw_data_folder + sbs_file, raw_data_folder + nav_file, "-o", raw_data_folder + pos_file])
+        subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "0", 
+                        raw_data_folder + obs_file, raw_data_folder + sbs_file, 
+                        raw_data_folder + nav_file, "-o", raw_data_folder + pos_file])
         graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, "")
 
         #RTK
@@ -233,19 +235,19 @@ if __name__ == "__main__":
 
             #RTK - GPS
             pos_file = raw_data_file[:-4] + '_rtk.pos'
-            conf = conf_folder + 'SSSS_rtk.conf'
+            conf = conf_folder + 'rtk_gps.conf'
             subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "2",
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file,
-                            raw_data_folder + nav_file, "-r", str(ref_X), str(ref_Y), str(ref_Z),
+                            raw_data_folder + nav_file, 
                             "-o", raw_data_folder + pos_file])
             graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name)
 
             #RTK - GPS+GAL
             pos_file = raw_data_file[:-4] + '_rtk_G.pos'
-            conf = conf_folder + 'SSSS_rtk_gal.conf'
+            conf = conf_folder + 'rtk_gal.conf'
             subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "2",
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file,
-                            raw_data_folder + nav_file, "-r", str(ref_X), str(ref_Y), str(ref_Z),
+                            raw_data_folder + nav_file, 
                             "-o", raw_data_folder + pos_file])
             graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name)
 
@@ -257,7 +259,7 @@ if __name__ == "__main__":
             conf = conf_folder + 'SSSS_dgps.conf'
             subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "1",
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file_dgps,
-                            raw_data_folder + nav_file, "-r", str(ref_X_dgps), str(ref_Y_dgps),
+                            raw_data_folder + nav_file,
                             str(ref_Z_dgps), "-o", raw_data_folder + pos_file])
             graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name_dgps)
 
@@ -266,7 +268,7 @@ if __name__ == "__main__":
             conf = conf_folder + 'SSSS_dgps_gal.conf'
             subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "1",
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file_dgps,
-                            raw_data_folder + nav_file, "-r", str(ref_X_dgps), str(ref_Y_dgps),
+                            raw_data_folder + nav_file,
                             str(ref_Z_dgps), "-o", raw_data_folder + pos_file])
             graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name_dgps)
 

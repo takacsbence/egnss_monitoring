@@ -1,0 +1,10 @@
+{ "conf_folder": "/home/tbence/Paripa/conf/",
+  "rov_stations": ["205"],
+  "ref_stations": ["BUTE0"],
+  "ref_data_save": "/home/tbence/Paripa/Reference_for_Kinematic/",
+  "work_folder": "/home/tbence/Paripa/rtk_monitor/",
+  "graph_folder": "/home/tbence/Paripa/",
+  "pic_folder": "/var/www/html/rtk_monitor/rtk_monitor_pics",
+  "dbase_name": "hegyi",
+  "log": "/home/tbence/Paripa/rtk_monitor_error_log.txt"
+}

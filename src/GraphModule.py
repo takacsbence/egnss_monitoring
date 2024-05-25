@@ -74,6 +74,10 @@ def plot_gen(data, mode, navi_sys, station, ref, pic_name):
         ymax = 10
         title = 'DGPS'
         mode_i = 4      #DGPS solutions
+    elif mode == 'ppp':
+        ymax = 1
+        title = 'PPP with SSR corrections'
+        mode_i = 7      #PPP with SSR
     else:
         ymax = 10
 
@@ -84,17 +88,20 @@ def plot_gen(data, mode, navi_sys, station, ref, pic_name):
     dtmax = max(data['datetime']).round('60min').to_pydatetime()
     ax.set_xlim([dtmin, dtmax])
     ax.yaxis.set_major_locator(plt.MaxNLocator(8))
-    ax.set_xlabel('time (hh:mm)')
-    ax.set_ylabel('Coordinate errors [meters]')
+    ax.set_xlabel('GPS time (hh:mm)')
+    ax.set_ylabel('Coordinate error [m]')
     ax.set_title('Position Error Graph ' + title + " " + navi_sys)
     ax.legend(loc=2)
     ax.grid()
 
-    #number of satellites
+    #number of satellites, ratio
+    data.loc[data['ratio'] >= 40, 'ratio'] = 39.9 #set ratio to 40 not to exceed graph
     ax2 = ax.twinx()
     ax2.plot(data['datetime'], data['nsat'], label='# of satellites', color='red')
     ax2.plot(data['datetime'], data['mode'], label='solution mode', color='purple')
-    ax2.set_ylim([0, 24])
+    if mode == 'kinematic':
+        ax2.plot(data['datetime'], data['ratio'], label='ratio', color='cyan')
+    ax2.set_ylim([0, 40])
     ax2.yaxis.set_major_locator(plt.MaxNLocator(8))
     ax2.set_ylabel('# of satellites / solution mode')
     ax2.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.0f'))
@@ -107,6 +114,7 @@ def plot_gen(data, mode, navi_sys, station, ref, pic_name):
 
     #save plot as an image
     plt.savefig(pic_name, dpi=100)
+    print(pic_name)
 
     return mode_i
 
@@ -250,6 +258,12 @@ if __name__ == "__main__":
     data_gps['EW_error'] = (data_gps['lon'] - ref_lon) * dlat * cos(radians(ref_lat)) * 3600
     data_gps['SN_error'] = (data_gps['lat'] - ref_lat) * dlat * 3600
     data_gps['ELE_error'] = data_gps['ele'] - ref_ele
+    
+    if mode == 'ppp':
+
+        #in PPP mode we have to correct by ITRS-ETRF manually. values need to be confirmed
+        data_gps['EW_error'] = data_gps['EW_error'] - 0.724
+        data_gps['SN_error'] = data_gps['SN_error'] - 0.580
 
     #generate plots
     mode_i = plot_gen(data_gps, mode, navi_sys, station, ref, pic_name)

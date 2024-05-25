@@ -1,9 +1,11 @@
 { "conf_folder": "/home/tbence/Paripa/conf/",
-  "rov_stations": ["205", "207", "206", "209", "210", "211", "212", "213", "214", "215"],
-  "ref_stations": ["BUTE0", "ZZON0"],
-  "ref_data_save": "/home/tbence/Paripa/Reference_for_Kinematic/",
+  "rov_stations": ["205", "209", "215", "208", "206", "207", "210", "211", "212", "213", "214"],
+  "ref_stations": ["BUTE0"],
+  "rov_data_save": "/opt/tbence/HC/data/",
+  "ref_data_save": "/opt/tbence/Paripa/Reference_for_Kinematic/",
   "work_folder": "/home/tbence/Paripa/Downloaded_zips/",
   "graph_folder": "/home/tbence/Paripa/",
-  "pic_folder": "/home/tbence/public_html/Position_Error_Graphs",
-  "dbase_name": "tbence"
+  "pic_folder": "/var/www/html/egnss/Position_Error_Graphs",
+  "dbase_name": "hegyi",
+  "log": "/home/tbence/Paripa/error_log.txt"
 }

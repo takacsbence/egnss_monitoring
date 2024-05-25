@@ -5,8 +5,16 @@
     unzip raw septentrio binary files
     convert them into RINEX
     convert rtcm messages from reference station to RINEX
-    run rnx2rtkp t post-process RINEX files in several positioning modes
-    call GraphModule to generate true position error plots and store data into database
+    run rnx2rtkp to post-process RINEX files in several positioning modes
+    plot true position error plots 
+    store statistical paramteres into psql database
+    
+    written by Hegyi Lehel and Takács Bence
+    last modified: 2024.05.24.
+    
+    TODO:
+    -
+    
 """
 
 import sys
@@ -14,9 +22,12 @@ import json
 import os
 import zipfile
 from datetime import datetime, timedelta
+from pathlib import Path
+from math import pi, cos, radians
 import shutil
 import subprocess
 import pandas as pd
+from GraphModule import header_lines, plot_gen, dbase_write
 
 def hour2session(hour):
     """ get abc session from hour, a = 0, b = 1, ...
@@ -47,14 +58,58 @@ def date2doy(dt):
 
     return year, year2, doy, hour, hour2
 
-def graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref):
+def graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations):
     """
-        call GraphModule.py to plot true position errors and store data into database
+        compute and plot true position errors and store data into database
     """
-    subprocess.run(["python3", graph_folder + "GraphModule.py", JNAME, raw_data_folder, pos_file,
-                    station, year, doy, ref])
+    #output file
+    pic_save = Path(pic_folder + '/Y' + year + '/D' + doy +'/PildoBox' + station)
+    pic_save.mkdir(parents=True, exist_ok=True)
+    pic_name = str(pic_save) + '/' + pos_file[:-3] + 'png'
 
-def raw_file(work_folder, station, dt):
+    #index of current station
+    station = 'PildoBox' + station
+    idx = data_stations[data_stations['id'] == station].index.item()
+
+    #true coordinates of rover
+    ref_lat = data_stations['lat'][idx]
+    ref_lon = data_stations['long'][idx]
+    ref_ele = data_stations['elev'][idx]
+
+    #1 arc seconds in latitude corresponds to ~31 m on the surface of the Earth
+    dlat = pi / 180 * 6380000 / 3600
+
+    #info from pos file header
+    ct, mode, navi_sys = header_lines(raw_data_folder + pos_file)
+
+    #load pos file
+    data_gps = pd.read_csv(raw_data_folder + pos_file, header=None,
+                           delim_whitespace=True, skiprows=ct)
+    data_gps.columns = ["date", "time", "lat", "lon", "ele", "mode", "nsat", "stdn", "stde",
+                        "stdu", "stdne", "stdeu", "stdun", "age", "ratio"]
+    print(data_gps.shape[0], 'positions read from', pos_file)
+    data_gps['datetime'] = pd.to_datetime(data_gps['date'] + ' ' + data_gps['time'],
+                                          format='%Y/%m/%d %H:%M:%S.%f')
+
+    #coordinate errors
+    data_gps['EW_error'] = (data_gps['lon'] - ref_lon) * dlat * cos(radians(ref_lat)) * 3600
+    data_gps['SN_error'] = (data_gps['lat'] - ref_lat) * dlat * 3600
+    data_gps['ELE_error'] = data_gps['ele'] - ref_ele
+    
+    if mode == 'ppp':
+
+        #in PPP mode we have to correct by ITRS-ETRF manually, values need to be confirmed
+        data_gps['EW_error'] = data_gps['EW_error'] - 0.724
+        data_gps['SN_error'] = data_gps['SN_error'] - 0.580
+
+    #generate plots
+    mode_i = plot_gen(data_gps, mode, navi_sys, station, ref, pic_name)
+
+    #write statistical parameters into psql database
+    dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys, mode_i, ref)
+
+
+def raw_file(rov_data_save, work_folder, station, dt):
     """ get raw file name and path from date and time parameters
         :param:     folder where temporary files are stored
                     station id, like 205
@@ -70,7 +125,7 @@ def raw_file(work_folder, station, dt):
     session = hour2session(hour)
 
     #zipped raw data folder
-    zipped_raw_data_folder = '/home/tbence/HC/data/Y' + year + '/D' + doy + '/PildoBox' + station + '/'
+    zipped_raw_data_folder = rov_data_save + 'Y' + year + '/D' + doy + '/PildoBox' + station + '/'
 
     #processed data folder
     raw_data_folder = work_folder + 'Y' + year + '/D' + doy + '/PildoBox' + station  + '/'
@@ -110,13 +165,21 @@ if __name__ == "__main__":
         conf_folder = JDATA["conf_folder"]      #folder of RTKLIB config files
         rov_stations = JDATA["rov_stations"]    #list of rover stations
         ref_stations = JDATA["ref_stations"]    #list of reference stations
+        rov_data_save = JDATA["rov_data_save"]  #rover station data folder
         ref_data_save = JDATA["ref_data_save"]  #reference station data folder
         work_folder = JDATA["work_folder"]      #working folder
         graph_folder = JDATA["graph_folder"]    #GraphModule folder
         log_file = JDATA["log"]
+        pic_folder = JDATA["pic_folder"]    #folder to save graph pictures
+        dbase_name = JDATA["dbase_name"]    #psql dbase name
 
     #open log file
     #log_file = open(log_file, 'a')
+
+    #load stations.txt file with true position of stations
+    data_stations = pd.read_csv('/home/tbence/Paripa/rov_stations.txt',
+                                header=None, delim_whitespace=True)
+    data_stations.columns = ["id", "city", "lat", "long", "elev"]
 
     #load ref_stations.txt file with true position of reference stations
     ref_stations_data = pd.read_csv('/home/tbence/Paripa/ref_stations.txt',
@@ -129,9 +192,9 @@ if __name__ == "__main__":
         year, year2, doy, hour, hour2 = date2doy(dt)
 
         #current raw file
-        raw_data_folder, raw_data_file = raw_file(work_folder, station, dt)
+        raw_data_folder, raw_data_file = raw_file(rov_data_save, work_folder, station, dt)
         #previous raw file
-        raw_data_folder_p, raw_data_file_p = raw_file(work_folder, station, dt + 1)
+        raw_data_folder_p, raw_data_file_p = raw_file(rov_data_save, work_folder, station, dt + 1)
 
         #concat these two files
         if os.path.exists(raw_data_folder_p + raw_data_file_p):
@@ -151,7 +214,7 @@ if __name__ == "__main__":
         #observation file
         obs_file = raw_data_file[:-3] + 'obs'
         subprocess.run(["/usr/local/bin/convbin", raw_data_folder + raw_data_file, "-v", "3.03",
-                        "-r", "sbf", "-d", raw_data_folder])
+                        "-r", "sbf", "-ha", "1/AERAT1675_382   NONE", "-d", raw_data_folder])
 
         #navigation file, mixed
         nav_file = raw_data_file[:-3] + 'nav'
@@ -162,7 +225,14 @@ if __name__ == "__main__":
         sbs_file = raw_data_file[:-3] + 'sbs'
         subprocess.run(["/usr/local/bin/convbin", raw_data_folder_p + raw_data_file_p, "-v", "3.03",
                         "-r", "sbf", "-s", raw_data_folder + sbs_file])
-
+                        
+        #ssr corrections
+        rtcm_ssr_folder = ref_data_save + 'SSRA00BKG0/'
+        rtcm_ssr_file_name = 'SSRA00BKG0' + year2 + doy + hour2 + '.rtcm'
+        if not os.path.exists(rtcm_ssr_folder + rtcm_ssr_file_name + '3'):
+            os.rename(rtcm_ssr_folder + rtcm_ssr_file_name, rtcm_ssr_folder + rtcm_ssr_file_name + '3')
+        rtcm_ssr_file_name = rtcm_ssr_file_name + '3'
+        
         #index of current reference station
         try:
             ref_idx = ref_stations_data[ref_stations_data['id'] == ref_stations[i]].index.item()
@@ -212,7 +282,8 @@ if __name__ == "__main__":
         subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "0",
                         raw_data_folder + obs_file, raw_data_folder + nav_file, "-o",
                         raw_data_folder + pos_file])
-        graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, "")
+        ref = ""
+        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations)
 
         #SPP - GPS+GAL
         pos_file = raw_data_file[:-4] + '_spp_G.pos'
@@ -220,7 +291,8 @@ if __name__ == "__main__":
         subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "0",
                         raw_data_folder + obs_file, raw_data_folder + nav_file, "-o",
                         raw_data_folder + pos_file])
-        graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, "")
+        ref = ""
+        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations)
 
         #SBAS - GPS
         pos_file = raw_data_file[:-4] + '_sbas.pos'
@@ -228,10 +300,11 @@ if __name__ == "__main__":
         subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "0", 
                         raw_data_folder + obs_file, raw_data_folder + sbs_file, 
                         raw_data_folder + nav_file, "-o", raw_data_folder + pos_file])
-        graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, "")
+        ref = ""
+        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations)
 
         #RTK
-        if ref_idx > -1:
+        if ref_idx > -1 and os.path.exists(rtcm_folder + rtcm_file_name):
 
             #RTK - GPS
             pos_file = raw_data_file[:-4] + '_rtk.pos'
@@ -240,7 +313,7 @@ if __name__ == "__main__":
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file,
                             raw_data_folder + nav_file, 
                             "-o", raw_data_folder + pos_file])
-            graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name)
+            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations)
 
             #RTK - GPS+GAL
             pos_file = raw_data_file[:-4] + '_rtk_G.pos'
@@ -249,10 +322,10 @@ if __name__ == "__main__":
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file,
                             raw_data_folder + nav_file, 
                             "-o", raw_data_folder + pos_file])
-            graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name)
+            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations)
 
         #DGPS
-        if ref_idx_dgps > -1:
+        if ref_idx_dgps > -1 and os.path.exists(rtcm_folder_dgps + rtcm_file_name_dgps):
 
             #DGPS - GPS
             pos_file = raw_data_file[:-4] + '_dgps.pos'
@@ -261,7 +334,7 @@ if __name__ == "__main__":
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file_dgps,
                             raw_data_folder + nav_file,
                             str(ref_Z_dgps), "-o", raw_data_folder + pos_file])
-            graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name_dgps)
+            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name_dgps, data_stations)
 
             #DGPS - GPS+GAL
             pos_file = raw_data_file[:-4] + '_dgps_G.pos'
@@ -270,7 +343,19 @@ if __name__ == "__main__":
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file_dgps,
                             raw_data_folder + nav_file,
                             str(ref_Z_dgps), "-o", raw_data_folder + pos_file])
-            graph_caller(graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name_dgps)
+            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations)
+
+        #SSR
+        pos_file = raw_data_file[:-4] + '_ssr.pos'
+        conf = conf_folder + 'ssr.conf'
+        subprocess.run(["/usr/local/bin/rnx2rtkp", "-k", conf, "-p", "7", 
+                        raw_data_folder + obs_file, raw_data_folder + nav_file,
+                        rtcm_ssr_folder + rtcm_ssr_file_name, "-o", raw_data_folder + pos_file])
+        ref_name = ""
+        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations)
 
         #delete raw data folder
-        shutil.rmtree(raw_data_folder)
+        if os.path.exists(raw_data_folder) and os.path.isdir(raw_data_folder):
+            shutil.rmtree(raw_data_folder)
+        if os.path.exists(raw_data_folder_p) and os.path.isdir(raw_data_folder_p):
+            shutil.rmtree(raw_data_folder_p)

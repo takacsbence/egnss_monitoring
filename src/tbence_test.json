@@ -7,5 +7,6 @@
   "graph_folder": "/home/tbence/Paripa/",
   "pic_folder": "/home/tbence/public_html/Position_Error_Graphs",
   "dbase_name": "tbence",
-  "log": "/home/tbence/Paripa/paripa_log.txt"
+  "log": "/home/tbence/Paripa/paripa_log.txt",
+  "dbase_write": false
 }

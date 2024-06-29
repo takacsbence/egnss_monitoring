@@ -58,7 +58,7 @@ def date2doy(dt):
 
     return year, year2, doy, hour, hour2
 
-def graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations):
+def graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations, dbase_write):
     """
         compute and plot true position errors and store data into database
     """
@@ -106,7 +106,8 @@ def graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, st
     mode_i = plot_gen(data_gps, mode, navi_sys, station, ref, pic_name)
 
     #write statistical parameters into psql database
-    dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys, mode_i, ref)
+    if dbase_write:
+        dbase_write(dbase_name, data_gps, int(station[-3:]), mode, navi_sys, mode_i, ref)
 
 
 def raw_file(rov_data_save, work_folder, station, dt):
@@ -148,9 +149,9 @@ def raw_file(rov_data_save, work_folder, station, dt):
 if __name__ == "__main__":
 
     #check number of arguments
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print('wrong number of arguments')
-        print('use', sys.argv[0], 'json_file')
+        print('use', sys.argv[0], 'json_file', 'dt')
         exit()
 
     #json file name as the first argument from command prompt
@@ -158,6 +159,11 @@ if __name__ == "__main__":
     if not os.path.exists(JNAME):
         print(JNAME, 'json file does not exist')
         exit()
+
+    if len(sys.argv) == 3:
+        dt = int(sys.argv[2])
+    else:
+        dt = 1 
 
     #load json file and get config parameters
     with open(JNAME) as jfile:
@@ -170,8 +176,9 @@ if __name__ == "__main__":
         work_folder = JDATA["work_folder"]      #working folder
         graph_folder = JDATA["graph_folder"]    #GraphModule folder
         log_file = JDATA["log"]
-        pic_folder = JDATA["pic_folder"]    #folder to save graph pictures
-        dbase_name = JDATA["dbase_name"]    #psql dbase name
+        pic_folder = JDATA["pic_folder"]        #folder to save graph pictures
+        dbase_name = JDATA["dbase_name"]        #psql dbase name
+        dbase_write = JDATA["dbase_write"]      #psql dbase write true or false
 
     #open log file
     #log_file = open(log_file, 'a')
@@ -283,7 +290,7 @@ if __name__ == "__main__":
                         raw_data_folder + obs_file, raw_data_folder + nav_file, "-o",
                         raw_data_folder + pos_file])
         ref = ""
-        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations)
+        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations, dbase_write)
 
         #SPP - GPS+GAL
         pos_file = raw_data_file[:-4] + '_spp_G.pos'
@@ -292,7 +299,7 @@ if __name__ == "__main__":
                         raw_data_folder + obs_file, raw_data_folder + nav_file, "-o",
                         raw_data_folder + pos_file])
         ref = ""
-        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations)
+        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations, dbase_write)
 
         #SBAS - GPS
         pos_file = raw_data_file[:-4] + '_sbas.pos'
@@ -301,7 +308,7 @@ if __name__ == "__main__":
                         raw_data_folder + obs_file, raw_data_folder + sbs_file, 
                         raw_data_folder + nav_file, "-o", raw_data_folder + pos_file])
         ref = ""
-        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations)
+        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref, data_stations, dbase_write)
 
         #RTK
         if ref_idx > -1 and os.path.exists(rtcm_folder + rtcm_file_name):
@@ -313,7 +320,7 @@ if __name__ == "__main__":
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file,
                             raw_data_folder + nav_file, 
                             "-o", raw_data_folder + pos_file])
-            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations)
+            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations, dbase_write)
 
             #RTK - GPS+GAL
             pos_file = raw_data_file[:-4] + '_rtk_G.pos'
@@ -322,7 +329,7 @@ if __name__ == "__main__":
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file,
                             raw_data_folder + nav_file, 
                             "-o", raw_data_folder + pos_file])
-            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations)
+            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations, dbase_write)
 
         #DGPS
         if ref_idx_dgps > -1 and os.path.exists(rtcm_folder_dgps + rtcm_file_name_dgps):
@@ -334,7 +341,7 @@ if __name__ == "__main__":
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file_dgps,
                             raw_data_folder + nav_file,
                             str(ref_Z_dgps), "-o", raw_data_folder + pos_file])
-            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name_dgps, data_stations)
+            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name_dgps, data_stations, dbase_write)
 
             #DGPS - GPS+GAL
             pos_file = raw_data_file[:-4] + '_dgps_G.pos'
@@ -343,7 +350,7 @@ if __name__ == "__main__":
                             raw_data_folder + obs_file, raw_data_folder + ref_obs_file_dgps,
                             raw_data_folder + nav_file,
                             str(ref_Z_dgps), "-o", raw_data_folder + pos_file])
-            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations)
+            graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations, dbase_write)
 
         #SSR
         pos_file = raw_data_file[:-4] + '_ssr.pos'
@@ -352,7 +359,7 @@ if __name__ == "__main__":
                         raw_data_folder + obs_file, raw_data_folder + nav_file,
                         rtcm_ssr_folder + rtcm_ssr_file_name, "-o", raw_data_folder + pos_file])
         ref_name = ""
-        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations)
+        graph_caller2(pic_folder, graph_folder, JNAME, raw_data_folder, pos_file, station, year, doy, ref_name, data_stations, dbase_write)
 
         #delete raw data folder
         if os.path.exists(raw_data_folder) and os.path.isdir(raw_data_folder):

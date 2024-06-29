@@ -7,5 +7,6 @@
   "graph_folder": "/home/tbence/Paripa/",
   "pic_folder": "/var/www/html/egnss/Position_Error_Graphs",
   "dbase_name": "hegyi",
-  "log": "/home/tbence/Paripa/error_log.txt"
+  "log": "/home/tbence/Paripa/error_log.txt",
+  "dbase_write": false
 }
